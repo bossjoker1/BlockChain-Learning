@@ -1,0 +1,71 @@
+package BLC
+
+import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/gob"
+	"log"
+	"time"
+)
+
+// 基本区块结构
+// 根据结构示意图定义
+
+type Block struct {
+	TimeStamp int64 // 时间戳：区块产生的时间
+	Height    int64 // 区块高度(代表区块唯一号码)
+	Pre_Hash  []byte
+	Self_Hash []byte
+	Data      []byte // 交易结构，之后定义
+	//随机数r & merkle root_hash
+	Nonce int64 // 记录碰撞成功后结束的随机数值
+}
+
+// 创建新区块
+func NewBlock(height int64, pre_hash []byte, data []byte) *Block {
+	block := &Block{Height: height, Pre_Hash: pre_hash, Data: data, TimeStamp: time.Now().Unix()}
+	//block.SetHash()
+	pow := NewPoW(block)
+	hash, nonce := pow.Run()
+	block.Self_Hash = hash
+	block.Nonce = nonce
+	return block
+}
+
+// 计算区块hash值
+// 定义成方法
+func (b *Block) SetHash() {
+	heightBytes := IntToHex(b.Height)
+	timeStampBytes := IntToHex(b.TimeStamp)
+	// 拼接 生成hash
+	blockBytes := bytes.Join([][]byte{heightBytes, timeStampBytes}, []byte{})
+	hash := sha256.Sum256(blockBytes)
+	b.Self_Hash = hash[:]
+}
+
+// 生成创世区块
+func CreateGenesisBlock(data string) *Block {
+	return NewBlock(1, nil, []byte(data))
+}
+
+// 序列化，将区块结构序列化为[]byte
+func (b *Block) Serialize() []byte {
+	var res bytes.Buffer
+	encoder := gob.NewEncoder(&res)
+	// 将b编码后存进res输出流
+	if err := encoder.Encode(b); err != nil {
+		log.Panicf("serialize the block to []byte failed %v\n", err)
+	}
+	return res.Bytes()
+}
+
+// 反序列化
+func DeserializeBlock(blockBytes []byte) *Block {
+	var b Block
+	decoder := gob.NewDecoder(bytes.NewReader(blockBytes))
+	// 从输入流中读取进b
+	if err := decoder.Decode(&b); err != nil {
+		log.Panicf("deserialize the []byte to block failed. %v\n", err)
+	}
+	return &b
+}

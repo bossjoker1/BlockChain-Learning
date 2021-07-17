@@ -133,3 +133,99 @@
 
 6. 否则放入孤儿区块池，返回1
 
+---
+
+## day_2
+
+比特币交易：
+
+- 包含输入、输出、交易ID
+
+- 每笔交易的输入来自于另一笔的输出(联系)
+
+以太坊(DAPP开发平台):
+
+- 每个DAPP消耗整条链的资源
+
+- 智能合约：自我校验、自我执行的协议
+
+- POW(EThash 内存难解：不与算力直接相关)
+
+- JS框架
+
+EOS(区块链3.0):
+
+- TPS提升
+
+- 不是单纯的公链，开发者可以在EOS上创建公链，链之间不影响资源
+
+- 无交易费(gas)
+
+- DPOS共识算法，超级节点进行验证等
+
+- Hyperledger Fabric: 联盟链
+
+    - 不发行加密货币
+    
+    - 实现权限区块链的底层基础架构
+    
+    - 身份服务：具有身份识别能力
+    
+    - 策略服务：提供访问控制，授权等一系列功能(联盟链的特点)
+    
+    - 区块链服务
+    
+    - 智能合约
+    
+    - 上层结构：API, SDK, CLI
+    
+## 公链实战(包含区块链基本特性)
+
+实现目标：
+
+![project](imgs/project.png)
+
+1. **区块链基本结构**
+
+定义Block和BlockChain结构
+
+复习下go基础知识：
+
+- bytes.buffer
+
+  其底层实现是[]byte即字节切片，有 `Read/Write` 方法
+
+  初始化一般直接用 `new`
+
+  `buffer := new(bytes.buffer)`
+  
+  转化为字节数组通过`binary.Write`方法
+  `binary.Write(buffer, binary.BigEndian, data)`
+  
+  字节数组拼接 `bytes.Join()` eg:
+  
+```
+  s := [][]byte{[]byte("foo"), []byte("bar"), []byte("baz")} 
+  fmt.Printf("%s", bytes.Join(s, []byte(", ")))
+  Output:
+  foo, bar, baz
+```
+
+**PoW**编写：
+
+在创建区块时引入工作量证明，添加nonce字段作为碰撞随机数和pre_hash以及生成的当前区块的信息共同生成hash，
+难度通过左移来限制hash的前缀0的个数
+
+```
+    target := big.NewInt(1)
+    target = target.Lsh(target, 256-targetBit)
+```
+
+**数据持久化**：
+
+bolt-db: 轻量级KV数据库(go编写的)
+
+- 增删改查
+
+- 自定义数据结构进行序列化, 这里用到的是go自带的gob库的`Encode/Decode`方法，一般用于rpc
+
