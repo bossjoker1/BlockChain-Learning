@@ -40,7 +40,7 @@ func (poW *PoW) Run() ([]byte, int64) {
 		dataBytes := poW.PrepareData(nonce)
 		hash = sha256.Sum256(dataBytes)
 		hashInt.SetBytes(hash[:])
-		fmt.Printf("hash : \r %x", hash)
+		//fmt.Printf("hash : \r %x", hash)
 		// 难度比较
 
 		if poW.target.Cmp(&hashInt) == 1 {

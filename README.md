@@ -229,3 +229,89 @@ bolt-db: 轻量级KV数据库(go编写的)
 
 - 自定义数据结构进行序列化, 这里用到的是go自带的gob库的`Encode/Decode`方法，一般用于rpc
 
+---
+
+## day_3
+
+**数据库迭代**：
+
+- 区块遍历：数据库读，通过`genesis block`的`Pre_hash`为空确定跳出条件
+
+- 自定义 `iterator ` 通过`Next()`方法遍历
+
+**复盘：**
+
+已实现的部分是：
+
+1. 区块/区块链的基本机构即相关操作
+2. PoW算法实现
+3. 数据持久化，读写操作，遍历操作
+
+**go cmdLine**：
+
+- `flag`包的使用，封装的很方便，比较简单
+  
+  之前自己玩过的例子：
+
+  ```
+  flag.StringVar(&FileType, "f", "exe", "FileType to search.")
+  flag.StringVar(&Dir, "d", "D:\go\src\VirusProject\", "directory")
+  flag.Parse() // 解析输入
+  ```
+  将cmdline输入赋值给第一个参数
+
+**实现CLI**：
+
+定义 CLI结构体，并添加方法，基于已经定义的block和bc结构。
+用到 `flag.NewFlagSet()/Parse()/Parsed()` 方法
+
+**git 操作**：
+
+基本的操作，快速略过
+
+- 版本回退
+  - `git reset HEAD <FILENAME>` 回退单个文件
+  - `git reset --hard HEAD^` 回退所有文件，慎用
+  - `git reset --hard <commit_id/(前六位)>` 回退到指定版本
+  
+- 工作区撤销修改 `git checkout -- <filename>`
+  
+- 删除文件：`git rm <filename>
+
+- 分支 
+  - `git branch (-d -D)` 
+  - `git checkout branch_name`
+  - `git merge branch_name`
+  
+- 工作现场保存
+
+  - `git stash` : 存储当前的工作现场
+  
+  - `git stash list` : 查看已保存的工作现场
+  
+  - 工作现场恢复
+  
+    - `git stash apply` : 不会删除缓存栈的内容
+    
+    - `git stash pop` : 出栈
+  
+    - `git stash apply stash@{n}` 恢复第n次保存的现场
+  
+- `tag`管理
+
+  - `git tag -a <tag_name> -m <description>`
+
+  - `git tag / git show <tag_name>`
+  
+  - `git tag -d ` 本地标签删除  `git push origin :ref/tags/<tag_name>`删除远程标签
+  
+  - `git push origin <tag_name>`
+  
+  - `git push origin --tags` 推送所有分支
+  
+**编写直接获得区块链对像函数**：
+
+通过 db 对象 和保存在数据库中的最新区块的hash可以方便的构建
+
+**看下《计网 运输层》**  ~~太菜了~~
+
