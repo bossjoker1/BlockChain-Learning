@@ -276,7 +276,7 @@ bolt-db: 轻量级KV数据库(go编写的)
   
 - 工作区撤销修改 `git checkout -- <filename>`
   
-- 删除文件：`git rm <filename>
+- 删除文件：`git rm <filename>`
 
 - 分支 
   - `git branch (-d -D)` 
