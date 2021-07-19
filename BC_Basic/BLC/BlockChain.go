@@ -5,6 +5,7 @@ import (
 	"github.com/boltdb/bolt"
 	"log"
 	"os"
+	"strconv"
 )
 
 // 区块链
@@ -22,15 +23,9 @@ func dbExists() bool {
 }
 
 // 由创世区块初始化区块链
-func CreateBlockChainWithGenesisBlock() *BlockChain {
+func CreateBlockChainWithGenesisBlock(addr string) *BlockChain {
 
-	// 打开数据库
-	db, err := bolt.Open(DBNAME, 0600, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	//defer db.Close()
-	if dbExists() == false {
+	if dbExists() == true {
 		fmt.Println("genesis block has existed.")
 		//
 		//
@@ -49,6 +44,14 @@ func CreateBlockChainWithGenesisBlock() *BlockChain {
 		//return blockChain
 		os.Exit(1)
 	}
+	//fmt.Println(dbExists())
+
+	// 打开数据库
+	db, err := bolt.Open(DBNAME, 0600, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	//defer db.Close()
 
 	var blockHash []byte
 
@@ -62,8 +65,12 @@ func CreateBlockChainWithGenesisBlock() *BlockChain {
 			}
 		}
 		if b != nil {
+
+			// 生成交易
+			txCoinbase := NewCoinBaseTX(addr)
+
 			// 不为空则创建创世区块
-			genesisBlock := CreateGenesisBlock("the genesis block")
+			genesisBlock := CreateGenesisBlock([]*TX{txCoinbase})
 			// 用hash值作为唯一key
 			err := b.Put(genesisBlock.Self_Hash, genesisBlock.Serialize())
 			if err != nil {
@@ -88,7 +95,7 @@ func CreateBlockChainWithGenesisBlock() *BlockChain {
 }
 
 // 添加新的区块
-func (bc *BlockChain) AddBlock(data []byte) {
+func (bc *BlockChain) AddBlock(txs []*TX) {
 	//newBlock := NewBlock(height, pre_hash, data)
 	//bc.Blocks = append(bc.Blocks, newBlock)
 
@@ -100,7 +107,7 @@ func (bc *BlockChain) AddBlock(data []byte) {
 			blockBytes := b.Get(bc.Top)
 			latest_Block := DeserializeBlock(blockBytes)
 			// 创建新区块
-			newblock := NewBlock(latest_Block.Height+1, latest_Block.Self_Hash, data)
+			newblock := NewBlock(latest_Block.Height+1, latest_Block.Self_Hash, txs)
 			// 存入数据库
 			err := b.Put(newblock.Self_Hash, newblock.Serialize())
 			if err != nil {
@@ -136,10 +143,24 @@ func (bc *BlockChain) PrintChainInfo() {
 		curBlock = it.Next()
 		fmt.Printf("\tHeight :		%d\n", curBlock.Height)
 		fmt.Printf("\tTimeStamp:		%d\n", curBlock.TimeStamp)
-		fmt.Printf("\tPre_Hash: 		%x\n", curBlock.Pre_Hash)
+		fmt.Printf("\tPre_Hash:		%x\n", curBlock.Pre_Hash)
 		fmt.Printf("\tSelf_Hash:		%x\n", curBlock.Self_Hash)
-		fmt.Printf("\tData:			%s\n", string(curBlock.Data))
 		fmt.Printf("\tnonce:			%d\n", curBlock.Nonce)
+		fmt.Printf("\tTransaction:	\n")
+		for i, tx := range curBlock.Txs {
+			fmt.Printf("\t\tTX_hash_%d:	%x\n", i+1, tx.Tx_hash)
+			fmt.Println("\t\tinput......")
+			for _, tins := range tx.Tins {
+				fmt.Printf("\t\t\tTX_in_hash:	%x\n", tins.Tx_hash)
+				fmt.Printf("\t\t\tTX_index_out:	%d\n", tins.Index_out)
+				fmt.Printf("\t\t\tTX_scriptsig:	%s\n", tins.ScriptSig)
+			}
+			fmt.Println("\t\toutput......")
+			for _, touts := range tx.Touts {
+				fmt.Printf("\t\t\tTX_out_values:	%d\n", touts.Value)
+				fmt.Printf("\t\t\tTX_ScriptPubkey: %s\n", touts.ScriptPubkey)
+			}
+		}
 
 		// 遍历到创世区块退出，Pre_hash为空
 		//var hashInt big.Int
@@ -173,4 +194,45 @@ func GetBCObject() *BlockChain {
 		return nil
 	})
 	return &BlockChain{db, top_hash}
+}
+
+// 挖矿函数, 生成新的区块，不同于AddBlock
+// 通过接受交易，进行打包确认(PoW)，然后生成新的区块
+func (bc *BlockChain) MineNewBlock(from, to, amount []string) {
+	// 接受交易
+	var txs []*TX
+	value, _ := strconv.Atoi(amount[0])
+	tx := NewSimpleTX(from[0], to[0], int64(value))
+	// 多笔交易只是个 for 循环的事情
+	txs = append(txs, tx)
+	// 打包交易
+
+	var block *Block
+	// 从db中获取最新数据库
+	bc.DB.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(BLOCKTABLENAME))
+		if b != nil {
+			hash := b.Get([]byte(LATEST_HASH))
+			blockBytes := b.Get(hash) //  ? -> 为了获取区块高度
+			block = DeserializeBlock(blockBytes)
+		}
+		return nil
+	})
+
+	// 生成新的区块
+	block = NewBlock(block.Height+1, block.Self_Hash, txs)
+
+	// 持久化新区块
+	bc.DB.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(BLOCKTABLENAME))
+		if b != nil {
+			err := b.Put(block.Self_Hash, block.Serialize())
+			if err != nil {
+				log.Panicf("update the new block failed. %v\n", err)
+			}
+			b.Put([]byte(LATEST_HASH), block.Self_Hash)
+			bc.Top = block.Self_Hash
+		}
+		return nil
+	})
 }

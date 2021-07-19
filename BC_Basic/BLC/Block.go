@@ -16,14 +16,15 @@ type Block struct {
 	Height    int64 // 区块高度(代表区块唯一号码)
 	Pre_Hash  []byte
 	Self_Hash []byte
-	Data      []byte // 交易结构，之后定义
+	Txs       []*TX
+	//Data      []byte // 交易结构，之后定义
 	//随机数r & merkle root_hash
 	Nonce int64 // 记录碰撞成功后结束的随机数值
 }
 
 // 创建新区块
-func NewBlock(height int64, pre_hash []byte, data []byte) *Block {
-	block := &Block{Height: height, Pre_Hash: pre_hash, Data: data, TimeStamp: time.Now().Unix()}
+func NewBlock(height int64, pre_hash []byte, txs []*TX) *Block {
+	block := &Block{Height: height, Pre_Hash: pre_hash, Txs: txs, TimeStamp: time.Now().Unix()}
 	//block.SetHash()
 	pow := NewPoW(block)
 	hash, nonce := pow.Run()
@@ -34,18 +35,18 @@ func NewBlock(height int64, pre_hash []byte, data []byte) *Block {
 
 // 计算区块hash值
 // 定义成方法
-func (b *Block) SetHash() {
-	heightBytes := IntToHex(b.Height)
-	timeStampBytes := IntToHex(b.TimeStamp)
-	// 拼接 生成hash
-	blockBytes := bytes.Join([][]byte{heightBytes, timeStampBytes}, []byte{})
-	hash := sha256.Sum256(blockBytes)
-	b.Self_Hash = hash[:]
-}
+//func (b *Block) SetHash() {
+//	heightBytes := IntToHex(b.Height)
+//	timeStampBytes := IntToHex(b.TimeStamp)
+//	// 拼接 生成hash
+//	blockBytes := bytes.Join([][]byte{heightBytes, timeStampBytes, b.Pre_Hash, b.Data}, []byte{})
+//	hash := sha256.Sum256(blockBytes)
+//	b.Self_Hash = hash[:]
+//}
 
 // 生成创世区块
-func CreateGenesisBlock(data string) *Block {
-	return NewBlock(1, nil, []byte(data))
+func CreateGenesisBlock(txs []*TX) *Block {
+	return NewBlock(1, nil, txs)
 }
 
 // 序列化，将区块结构序列化为[]byte
@@ -68,4 +69,16 @@ func DeserializeBlock(blockBytes []byte) *Block {
 		log.Panicf("deserialize the []byte to block failed. %v\n", err)
 	}
 	return &b
+}
+
+// 将区块中的交易结构转化为[]byte
+func (b *Block) HashTransactions() []byte {
+	var txHashes [][]byte
+
+	for _, tx := range b.Txs {
+		txHashes = append(txHashes, tx.Tx_hash)
+	}
+
+	txHash := sha256.Sum256(bytes.Join(txHashes, []byte{}))
+	return txHash[:]
 }
