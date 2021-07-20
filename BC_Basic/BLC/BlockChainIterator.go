@@ -8,7 +8,9 @@ import (
 // 迭代器
 
 type BlockChainIterator struct {
-	DB        *bolt.DB
+	DB *bolt.DB
+	// 与BlockChain的差异
+	// BlockChain 就像是链表尾，一直维护的最末尾的那块信息，和整条链的部分信息
 	Curr_Hash []byte
 }
 

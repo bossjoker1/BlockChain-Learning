@@ -7,3 +7,8 @@ type TxOutput struct {
 	// 钱是谁的
 	ScriptPubkey string
 }
+
+// output 身份验证
+func (tout *TxOutput) UnLockPubKeyWithAddr(addr string) bool {
+	return addr == tout.ScriptPubkey
+}

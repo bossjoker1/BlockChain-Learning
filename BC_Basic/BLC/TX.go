@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/gob"
+	"encoding/hex"
+	"fmt"
 	"log"
 )
 
@@ -45,16 +47,29 @@ func NewCoinBaseTX(addr string) *TX {
 }
 
 // 生成 转账交易
-func NewSimpleTX(from string, to string, amount int64) *TX {
+func NewSimpleTX(from string, to string, amount int64, bc *BlockChain, txs []*TX) *TX {
 	var (
 		txInputs  []*TxInput
 		txOutputs []*TxOutput
 	)
 
+	// 查找指定地址可用的UTXO
+	money, spendableUTXO := bc.FindSpendableUTXO(from, amount, txs)
+	fmt.Printf("from %s , money: %d\n", from, money)
+	for txHash, indeArray := range spendableUTXO {
+		txHashBytes, _ := hex.DecodeString(txHash)
+		for _, index := range indeArray {
+			// 此处的输出需要被花费，即被其它的交易所引用
+			txInput := &TxInput{Tx_hash: txHashBytes, Index_out: index, ScriptSig: from}
+			txInputs = append(txInputs, txInput)
+		}
+	}
+
 	// 输入结构
 	// 消费
-	txInput := &TxInput{[]byte("1"), 0, from}
-	txInputs = append(txInputs, txInput)
+	//txInput := &TxInput{[]byte("1"), 0, from}
+	//txInputs = append(txInputs, txInput)
+	//utxo := GetUTXOs(from)
 
 	// 输出结构
 	// 转账
@@ -62,11 +77,16 @@ func NewSimpleTX(from string, to string, amount int64) *TX {
 	txOutputs = append(txOutputs, txOutput)
 
 	// 找零
-	txOutput = &TxOutput{MINEAWARD - amount, from}
+	txOutput = &TxOutput{money - amount, from}
 	txOutputs = append(txOutputs, txOutput)
 
 	tx := &TX{nil, txInputs, txOutputs}
 	tx.HashTX()
 
 	return tx
+}
+
+// 判断是否为coinbase交易
+func (tx *TX) IsCoinbase() bool {
+	return len(tx.Tins[0].Tx_hash) == 0 && tx.Tins[0].Index_out == -1
 }
