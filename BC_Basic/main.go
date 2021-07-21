@@ -23,6 +23,18 @@ func main() {
 	//blockChain.PrintChainInfo()
 	//defer blockChain.DB.Close()
 	//BLC.PrintUsage()
+
+	// 命令行测试
 	cli := BLC.CLI{}
 	cli.Run()
+
+	//base58编码测试
+	//test := BLC.Base58Encode([]byte("fuck bug"))
+	//fmt.Printf("%s\n", BLC.Base58Decode(test))
+
+	// 钱包获取地址测试
+	//wallet := BLC.NewWallet()
+	//addr := wallet.GetAddr()
+	//fmt.Printf("addr: %s\n", addr)
+	//fmt.Println("isValid? = ", BLC.IsValidforAddr(addr))
 }

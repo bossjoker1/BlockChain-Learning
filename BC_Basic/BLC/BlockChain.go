@@ -155,12 +155,12 @@ func (bc *BlockChain) PrintChainInfo() {
 			for _, tins := range tx.Tins {
 				fmt.Printf("\t\t\tTX_in_hash:	%x\n", tins.Tx_hash)
 				fmt.Printf("\t\t\tTX_index_out:	%d\n", tins.Index_out)
-				fmt.Printf("\t\t\tTX_scriptsig:	%s\n", tins.ScriptSig)
+				// fmt.Printf("\t\t\tTX_scriptsig:	%s\n", tins.ScriptSig)
 			}
 			fmt.Println("\t\toutput......")
 			for _, touts := range tx.Touts {
 				fmt.Printf("\t\t\tTX_out_values:	%d\n", touts.Value)
-				fmt.Printf("\t\t\tTX_ScriptPubkey: %s\n", touts.ScriptPubkey)
+				fmt.Printf("\t\t\tTX_ScriptPubkey: %x\n", touts.PubkeyHash)
 			}
 		}
 
@@ -259,8 +259,10 @@ func (bc *BlockChain) GetUTXOs(addr string, txs []*TX) []*UTXO {
 		// 再通过索引找到相关的output
 		if !tx.IsCoinbase() {
 			for _, in := range tx.Tins {
-				// 验证地址
-				if in.UnLockWithAddr(addr) {
+				// 验证公钥hash
+				publicKeyHash := Base58Decode([]byte(addr))
+				ripemd_sha := publicKeyHash[1 : len(publicKeyHash)-CHECKSUMLEN]
+				if in.UnLockWithRipemd_SHA(ripemd_sha) {
 					// 添加到已花费输出map中
 					key := hex.EncodeToString(in.Tx_hash)
 					spentTXOutput[key] = append(spentTXOutput[key], in.Index_out)
@@ -307,8 +309,10 @@ func (bc *BlockChain) GetUTXOs(addr string, txs []*TX) []*UTXO {
 			// 再通过索引找到相关的output
 			if !tx.IsCoinbase() {
 				for _, in := range tx.Tins {
-					// 验证地址
-					if in.UnLockWithAddr(addr) {
+					// 验证公钥hash
+					publicKeyHash := Base58Decode([]byte(addr))
+					ripemd_sha := publicKeyHash[1 : len(publicKeyHash)-CHECKSUMLEN]
+					if in.UnLockWithRipemd_SHA(ripemd_sha) {
 						// 添加到已花费输出map中
 						key := hex.EncodeToString(in.Tx_hash)
 						spentTXOutput[key] = append(spentTXOutput[key], in.Index_out)

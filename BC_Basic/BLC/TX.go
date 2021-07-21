@@ -36,9 +36,10 @@ func (tx *TX) HashTX() {
 func NewCoinBaseTX(addr string) *TX {
 	// 输入
 	// 系统给的奖励，没有上一块的hash，也没有上一次输出的索引，这里置为 -1
-	txInput := &TxInput{[]byte{}, -1, "Genesis Data"}
+	// 创世区块没有hash
+	txInput := &TxInput{[]byte{}, -1, nil, nil}
 	// 输出
-	txOutput := &TxOutput{MINEAWARD, addr}
+	txOutput := NewTXOutput(10, addr)
 	txCoinbase := &TX{nil, []*TxInput{txInput}, []*TxOutput{txOutput}}
 	// hash
 	txCoinbase.HashTX()
@@ -56,11 +57,16 @@ func NewSimpleTX(from string, to string, amount int64, bc *BlockChain, txs []*TX
 	// 查找指定地址可用的UTXO
 	money, spendableUTXO := bc.FindSpendableUTXO(from, amount, txs)
 	fmt.Printf("from %s , money: %d\n", from, money)
+
+	wallets, _ := NewWallets()
+	wallet := wallets.Wallets[from]
+	pubKey := wallet.PublicKey
+
 	for txHash, indeArray := range spendableUTXO {
 		txHashBytes, _ := hex.DecodeString(txHash)
 		for _, index := range indeArray {
 			// 此处的输出需要被花费，即被其它的交易所引用
-			txInput := &TxInput{Tx_hash: txHashBytes, Index_out: index, ScriptSig: from}
+			txInput := &TxInput{Tx_hash: txHashBytes, Index_out: index, Signature: nil, PublicKey: pubKey}
 			txInputs = append(txInputs, txInput)
 		}
 	}
@@ -73,11 +79,11 @@ func NewSimpleTX(from string, to string, amount int64, bc *BlockChain, txs []*TX
 
 	// 输出结构
 	// 转账
-	txOutput := &TxOutput{amount, to}
+	txOutput := NewTXOutput(amount, to)
 	txOutputs = append(txOutputs, txOutput)
 
 	// 找零
-	txOutput = &TxOutput{money - amount, from}
+	txOutput = NewTXOutput(money-amount, from)
 	txOutputs = append(txOutputs, txOutput)
 
 	tx := &TX{nil, txInputs, txOutputs}
