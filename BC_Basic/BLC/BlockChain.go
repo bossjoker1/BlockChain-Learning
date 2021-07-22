@@ -1,6 +1,8 @@
 package BLC
 
 import (
+	"bytes"
+	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
 	"github.com/boltdb/bolt"
@@ -212,6 +214,12 @@ func (bc *BlockChain) MineNewBlock(from, to, amount []string) {
 		// 打包交易
 	}
 
+	// 给矿工一定的奖励
+	// 默认设置地址列表中的第一个地址为抢夺到几张权的矿工地址
+	// 所以这里取from[0]
+	tx := NewCoinBaseTX(from[0])
+	txs = append(txs, tx)
+
 	var block *Block
 	// 从db中获取最新数据库
 	_ = bc.DB.View(func(tx *bolt.Tx) error {
@@ -223,6 +231,19 @@ func (bc *BlockChain) MineNewBlock(from, to, amount []string) {
 		}
 		return nil
 	})
+
+	var txsc []*TX // 关联交易
+	// 在生成新区块之前需要进行验证签名
+	for _, tx := range txs {
+		// 每一笔交易都得验证
+		// 如果后续交易存在前面的关联输入
+		// 则对应的前面交易都可能需要前面，因此放入是此时交易的缓存
+		fmt.Printf("txHash : %x\n", tx.Tx_hash)
+		if !bc.VerifyTX(tx, txs) {
+			log.Panicf("error tx [%x] verify failed! \n", tx.Tx_hash)
+		}
+		txsc = append(txsc, tx)
+	}
 
 	// 生成新的区块
 	block = NewBlock(block.Height+1, block.Self_Hash, txs)
@@ -428,4 +449,148 @@ func (bc *BlockChain) FindSpendableUTXO(from string, amount int64, txs []*TX) (i
 		os.Exit(1)
 	}
 	return value, spendableUTXO
+}
+
+// 查找指定的交易
+// hash_id : input所引用的交易hash
+func (bc *BlockChain) FindTX(hash_id []byte, txs []*TX) TX {
+	// 查找缓存中是否有符合条件的关联交易
+	for _, tx := range txs {
+		if bytes.Compare(tx.Tx_hash, hash_id) == 0 {
+			return *tx
+		}
+	}
+
+	bcit := bc.Iterator()
+	for {
+		block := bcit.Next()
+		for _, tx := range block.Txs {
+			// 判断交易hash是否相等
+			if bytes.Compare(tx.Tx_hash, hash_id) == 0 {
+				return *tx
+			}
+		}
+		var hashInt big.Int
+		hashInt.SetBytes(block.Pre_Hash)
+		if hashInt.Cmp(big.NewInt(0)) == 0 {
+			break
+		}
+	}
+	// 没找到，返回空的交易
+	return TX{}
+}
+
+// 交易签名
+func (bc *BlockChain) SignTX(tx *TX, priKey ecdsa.PrivateKey, txs []*TX) {
+	// coinbase不需要签名
+	if tx.IsCoinbase() {
+		return
+	}
+
+	// 处理input, 查找tx的input所引用的output所属的交易
+	preTXs := make(map[string]TX)
+	for _, tin := range tx.Tins {
+		// 查找所引用的交易
+		preTX := bc.FindTX(tin.Tx_hash, txs)
+		preTXs[hex.EncodeToString(preTX.Tx_hash)] = preTX
+	}
+
+	// 实现签名函数
+
+	tx.Sign(priKey, preTXs)
+
+}
+
+func (bc *BlockChain) VerifyTX(tx *TX, txs []*TX) bool {
+	// coinbase不需要签名
+	if tx.IsCoinbase() {
+		return true
+	}
+
+	// 查找指定交易的关联交易
+	preTXs := make(map[string]TX)
+
+	for _, tin := range tx.Tins {
+		preTX := bc.FindTX(tin.Tx_hash, txs)
+		preTXs[hex.EncodeToString(preTX.Tx_hash)] = preTX
+	}
+
+	return tx.Verify(preTXs)
+}
+
+func (bc *BlockChain) FindUTXOMap() map[string]*TxOutputs {
+	bcit := bc.Iterator()
+
+	// 存储所有已花费的UTXO
+	// key : 指定交易hash
+	// value: 代表所有引用了该指定交易的output的输入
+
+	spentUTXOMap := make(map[string][]*TxInput)
+
+	// 与上面对应
+	utxoMap := make(map[string]*TxOutputs)
+
+	for {
+		block := bcit.Next()
+		// 遍历每个区块中的交易
+		for i := len(block.Txs) - 1; i >= 0; i-- {
+			// 保存输出
+			txOutputs := &TxOutputs{[]*UTXO{}}
+			// 获取每一个交易
+			tx := block.Txs[i]
+
+			if !tx.IsCoinbase() {
+				// 遍历输入
+				for _, tin := range tx.Tins {
+					// 当前输入引用的交易hash
+					txhash := hex.EncodeToString(tin.Tx_hash)
+					spentUTXOMap[txhash] = append(spentUTXOMap[txhash], tin)
+				}
+			}
+
+			// 遍历输出
+			txhash := hex.EncodeToString(tx.Tx_hash)
+		WorkOutloop:
+			for i, out := range tx.Touts {
+				// 查找指定hash的关联输入
+				txInputs := spentUTXOMap[txhash] //指定hash交易的关联输入
+				if len(txInputs) > 0 {
+					// 说明有output被花费了，但不一定是所有的output，因此还得遍历一下
+					isSpent := false
+
+					for _, in := range txInputs {
+						outPubKey := out.PubkeyHash
+						inPubkey := in.PublicKey
+						// 检查是被哪个引用了, 或者没被引用
+						if bytes.Compare(outPubKey, Ripemd160_SHA256(inPubkey)) == 0 &&
+							i == in.Index_out {
+							// 索引也必须相等，因为如果是拆分的两个不同的utxo属于同一个人，那么还得继续细分到底引用的是哪一个
+							isSpent = true
+							continue WorkOutloop
+						}
+					}
+
+					if !isSpent {
+						utxo := &UTXO{Tx_hash: tx.Tx_hash, Out_index: i, Output: out}
+						txOutputs.UTXOS = append(txOutputs.UTXOS, utxo)
+					}
+				} else {
+					// 说明都是未花费的输出
+					utxo := &UTXO{Tx_hash: tx.Tx_hash, Out_index: i, Output: out}
+					txOutputs.UTXOS = append(txOutputs.UTXOS, utxo)
+				}
+
+			}
+
+			utxoMap[txhash] = txOutputs // 该交易的所有UTXO
+		}
+
+		var hashInt big.Int
+		hashInt.SetBytes(block.Pre_Hash)
+		if hashInt.Cmp(big.NewInt(0)) == 0 {
+			break
+		}
+	}
+
+	return utxoMap
 }

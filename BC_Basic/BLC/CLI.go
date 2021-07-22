@@ -15,6 +15,7 @@ type CLI struct {
 
 func PrintUsage() {
 	fmt.Println("Usage: ")
+	fmt.Printf("\ttest	-- 测试程序代码\n ")
 	fmt.Printf("\tcreatewallets 	-- 创建钱包\n")
 	fmt.Printf("\taddrlists 	-- 获取钱包地址列表\n")
 	fmt.Printf("\tcreateblockchain -addr [address]	-- 地址\n")
@@ -40,7 +41,11 @@ func (cli *CLI) GetBalance(from string) {
 	//fmt.Printf("unUTXO: %v\n", outPuts)
 	bc := GetBCObject()
 	defer bc.DB.Close()
-	amount := bc.GetBalance(from)
+	//amount := bc.GetBalance(from)
+	//fmt.Printf("\t addr : %s , balance : %d \n", from, amount)
+
+	utxoSet := &UTXOSet{bc}
+	amount := utxoSet.GetBalance(from)
 	fmt.Printf("\t addr : %s , balance : %d \n", from, amount)
 }
 
@@ -81,7 +86,14 @@ func (cli *CLI) PrintChain() {
 
 // 创建区块链
 func (cli *CLI) CreateBlockchainWithGenesis(addr string) {
-	CreateBlockChainWithGenesisBlock(addr)
+	blockChain := CreateBlockChainWithGenesisBlock(addr)
+	defer blockChain.DB.Close()
+
+	// 设置UTXOSet操作
+
+	utxoSet := &UTXOSet{BlockChain: blockChain}
+	// 更新
+	utxoSet.ResetUTXOSet()
 }
 
 // 创建钱包集合
@@ -97,6 +109,28 @@ func (cli *CLI) GetAddrLists() {
 	for addr, _ := range wallets.Wallets {
 		fmt.Printf("address : [%s]\n", addr)
 	}
+}
+
+func (cli *CLI) TestMethod() {
+	blockchain := GetBCObject()
+	defer blockchain.DB.Close()
+
+	utxoMap := blockchain.FindUTXOMap()
+	for key, value := range utxoMap {
+		fmt.Printf("key : [%x]\n", key)
+		for _, utxo := range value.UTXOS {
+			fmt.Printf("\thash : [%x], out_index : [%v], txOutput: [%v]\n", utxo.Tx_hash, utxo.Out_index, utxo.Output)
+		}
+	}
+	fmt.Println("-----------------")
+}
+
+func (cli *CLI) TestResetUTXO() {
+	bc := GetBCObject()
+	defer bc.DB.Close()
+
+	utxoSet := &UTXOSet{BlockChain: bc}
+	utxoSet.ResetUTXOSet() // 重置UTXO
 }
 
 // 运行函数
@@ -133,7 +167,15 @@ func (cli *CLI) Run() {
 	// 查询余额参数
 	flagBalanceArg := getBalanceCmd.String("from", "", "查询地址")
 
+	// 测试cmd line
+	testCmd := flag.NewFlagSet("test", flag.ExitOnError)
+
 	switch os.Args[1] {
+	case "test":
+		err := testCmd.Parse(os.Args[2:])
+		if nil != err {
+			log.Panicf("parse cmd of test failed! %v\n", err)
+		}
 	case "createwallets":
 		err := createWalletsCmd.Parse(os.Args[2:])
 		if err != nil {
@@ -176,6 +218,12 @@ func (cli *CLI) Run() {
 	}
 
 	// Parsed()判断是否解析成功
+
+	// 测试
+	if testCmd.Parsed() {
+		cli.TestMethod()
+		cli.TestResetUTXO()
+	}
 
 	// 创建钱包
 	if createWalletsCmd.Parsed() {

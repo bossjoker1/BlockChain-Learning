@@ -567,3 +567,110 @@ type Wallet struct {
 
 主要应用的函数 : `ecdsa.Sign()/.Verify()`
 
+--- 
+
+## day_7
+
+**交易签名代码实现**：
+
+需要对不需要签名的字段进行置空处理，也就是说必须对原数据做一个裁剪，这里返回了一个copy。
+
+**签名验证**：
+
+- 先获取交易签名的字段
+
+- 构建椭圆加密过程使用的相同的椭圆, 椭圆加密返回的r, s数据长度大小相同
+
+- 椭圆加密的公钥是(X, Y)坐标对
+
+验证出了点bug，写个测试程序，感觉逻辑没啥问题啊，难道preTXs那儿错了？
+~~视频的bug更多，然后还直接跳了？惊呼~~
+
+```go
+package main
+
+import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"fmt"
+	"log"
+	"math/big"
+)
+
+func main() {
+  curve := elliptic.P256()
+  // 基于椭圆加密
+  priv, err := ecdsa.GenerateKey(curve, rand.Reader)
+  if err != nil {
+    log.Panicf("ecdsa generate key failed. %v\n", err)
+  }
+
+  pubKey := append(priv.PublicKey.X.Bytes(), priv.PublicKey.Y.Bytes()...)
+
+  r, s, err := ecdsa.Sign(rand.Reader, priv, []byte("test ecdsa"))
+
+  x := big.Int{}
+  y := big.Int{}
+  pubKeyLen := len(pubKey)
+  x.SetBytes(pubKey[:(pubKeyLen / 2)])
+  y.SetBytes(pubKey[(pubKeyLen / 2):])
+
+  rawPubkey := ecdsa.PublicKey{Curve: curve, X: &x, Y: &y}
+
+  if !ecdsa.Verify(&rawPubkey, []byte("test ecdsa"), r, s) {
+    fmt.Println("false!")
+  } else {
+    fmt.Println("true")
+  }
+}
+
+```
+
+```
+output:
+	true
+```
+
+好在bug解除了，~~爽~~，`txCopy`写成了`tx`直接把原来的公钥给赋成了`nil`。
+
+但问题还是得说的
+
+![error](imgs/error2.png)
+
+1. 这里`pubkeyhash`赋值给`pubkey`很显然就不对，而且你这样签名的时候还是得签，摘要的时候就一并拿着呗，感觉有点逻辑不自洽
+
+2. preTx在这并不需要，首先就是上面的逻辑问题，另外如果是想获取公钥，那么在生成交易的时候就已经链接好了，并不需要通过索引来找啊。
+
+**挖矿奖励**：
+
+即对生成区块的矿工系统给他分配一定的币。
+
+本程序默认地址中第一个抢到记账权并获得奖励。为了区别创世区块的hash, 将生成交易的交易的时间也作为
+一个字段来生成`tx_Hash`
+
+事实上每个区块都应该包含多个交易，而且根据矿工的算力来决定能够得到记账权的概率。
+
+需要注意的是判断是否是coinbase的函数  `IsCoinbase` 应该更新，视频好像没有改。
+
+**UTXO优化**：
+
+现状：UTXO至少得有O(n^3)的复杂度，如果区块个数多了，效率下降会挺明显的，需要优化。
+
+想法：
+
+- 建立一个只包含UTXO的数据库？
+
+- UTXO的经常变化，如何维护？重置UTXO，连续读写数据库文件会不会也影响效率？
+
+- 把数据库的更新放在生成新区块之前
+
+在次基础上做到基于创建的数据库表中查找指定地址的utxo
+
+又发现个错误，它只在创建创世区块时更新数据库肯定是不行的，必须得在没上线一个区块就得更新，这样自然而然
+也能引出下一步的逻辑修正，即多个交易，前面的交易可能成为后面交易的前提，但由于还未打包导致不能识别这些utxo
+
+而对于签名，如果缓存中包含指定交易hash的关联输入，我们是不是也得考虑到对其进行签名？即
+已经被打包上传后的区块中的output被在缓存区中的交易输入所引用。或者说缓存区的tx_hash(引用的前一个交易的hash)指向的交易在数据库中
+
+经过上面一番工作，我们需要把交易时查找utxo也改为从数据库中查
