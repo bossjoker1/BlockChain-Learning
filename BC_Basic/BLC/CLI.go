@@ -35,11 +35,11 @@ func IsValidArgs() {
 	}
 }
 
-func (cli *CLI) GetBalance(from string) {
+func (cli *CLI) GetBalance(from string, nodeId string) {
 	// 获取指定地址的余额
 	//outPuts := GetUTXOs(from)
 	//fmt.Printf("unUTXO: %v\n", outPuts)
-	bc := GetBCObject()
+	bc := GetBCObject(nodeId)
 	defer bc.DB.Close()
 	//amount := bc.GetBalance(from)
 	//fmt.Printf("\t addr : %s , balance : %d \n", from, amount)
@@ -50,14 +50,17 @@ func (cli *CLI) GetBalance(from string) {
 }
 
 // 发送交易
-func (cli *CLI) Send(from, to, amount []string) {
-	if dbExists() == false {
+func (cli *CLI) Send(from []string, to []string, amount []string, node_id string) {
+	if dbExists(node_id) == false {
 		fmt.Println("database not exist")
 		os.Exit(1)
 	}
-	bc := GetBCObject() //获得区块链对象
+	bc := GetBCObject(node_id) //获得区块链对象
 	defer bc.DB.Close()
-	bc.MineNewBlock(from, to, amount)
+	bc.MineNewBlock(from, to, amount, node_id)
+
+	utxoSet := &UTXOSet{BlockChain: bc}
+	utxoSet.ResetUTXOSet() // 重置UTXO
 
 }
 
@@ -74,19 +77,19 @@ func (cli *CLI) Send(from, to, amount []string) {
 //}
 
 // 输出区块链信息
-func (cli *CLI) PrintChain() {
-	if dbExists() == false {
+func (cli *CLI) PrintChain(nodeId string) {
+	if dbExists(nodeId) == false {
 		fmt.Println("database not exist.")
 		os.Exit(1)
 	}
-	blockChain := GetBCObject() // 获得区块链对象
+	blockChain := GetBCObject(nodeId) // 获得区块链对象
 	defer blockChain.DB.Close()
 	blockChain.PrintChainInfo()
 }
 
 // 创建区块链
-func (cli *CLI) CreateBlockchainWithGenesis(addr string) {
-	blockChain := CreateBlockChainWithGenesisBlock(addr)
+func (cli *CLI) CreateBlockchainWithGenesis(addr string, nodeId string) {
+	blockChain := CreateBlockChainWithGenesisBlock(addr, nodeId)
 	defer blockChain.DB.Close()
 
 	// 设置UTXOSet操作
@@ -97,22 +100,22 @@ func (cli *CLI) CreateBlockchainWithGenesis(addr string) {
 }
 
 // 创建钱包集合
-func (cli *CLI) CreateWallets() {
-	wallets, _ := NewWallets()
-	wallets.CreateWallet()
+func (cli *CLI) CreateWallets(node_id string) {
+	wallets, _ := NewWallets(node_id)
+	wallets.CreateWallet(node_id)
 	fmt.Printf("wallet: %v\n", wallets)
 }
 
-func (cli *CLI) GetAddrLists() {
+func (cli *CLI) GetAddrLists(node_id string) {
 	fmt.Println("print all wallets' address.")
-	wallets, _ := NewWallets()
+	wallets, _ := NewWallets(node_id)
 	for addr, _ := range wallets.Wallets {
 		fmt.Printf("address : [%s]\n", addr)
 	}
 }
 
-func (cli *CLI) TestMethod() {
-	blockchain := GetBCObject()
+func (cli *CLI) TestMethod(nodeid string) {
+	blockchain := GetBCObject(nodeid)
 	defer blockchain.DB.Close()
 
 	utxoMap := blockchain.FindUTXOMap()
@@ -125,8 +128,8 @@ func (cli *CLI) TestMethod() {
 	fmt.Println("-----------------")
 }
 
-func (cli *CLI) TestResetUTXO() {
-	bc := GetBCObject()
+func (cli *CLI) TestResetUTXO(nodeid string) {
+	bc := GetBCObject(nodeid)
 	defer bc.DB.Close()
 
 	utxoSet := &UTXOSet{BlockChain: bc}
@@ -137,6 +140,13 @@ func (cli *CLI) TestResetUTXO() {
 func (cli *CLI) Run() {
 	// 检测参数数量
 	IsValidArgs()
+
+	// 通过环境变量配置
+	node_id := os.Getenv("NODE_ID")
+	if node_id == "" {
+		fmt.Println("NODE_ID is not existed.")
+		os.Exit(1)
+	}
 
 	// 新建命令
 	//addBlockCmd := flag.NewFlagSet("addblock", flag.ExitOnError)
@@ -221,18 +231,18 @@ func (cli *CLI) Run() {
 
 	// 测试
 	if testCmd.Parsed() {
-		cli.TestMethod()
-		cli.TestResetUTXO()
+		cli.TestMethod(node_id)
+		cli.TestResetUTXO(node_id)
 	}
 
 	// 创建钱包
 	if createWalletsCmd.Parsed() {
-		cli.CreateWallets()
+		cli.CreateWallets(node_id)
 	}
 
 	// 获得钱包地址
 	if getAddrListsCmd.Parsed() {
-		cli.GetAddrLists()
+		cli.GetAddrLists(node_id)
 	}
 
 	// 转账
@@ -250,7 +260,7 @@ func (cli *CLI) Run() {
 		// 打印转账信息
 
 		fmt.Printf("From [%s] to [%s]   value [%s]\n", JsonToArray(*flagFromAddr), JsonToArray(*flagToAddr), JsonToArray(*flagAmount))
-		cli.Send(JsonToArray(*flagFromAddr), JsonToArray(*flagToAddr), JsonToArray(*flagAmount)) // 发送交易
+		cli.Send(JsonToArray(*flagFromAddr), JsonToArray(*flagToAddr), JsonToArray(*flagAmount), node_id) // 发送交易
 	}
 
 	//// 添加区块
@@ -265,7 +275,7 @@ func (cli *CLI) Run() {
 	//}
 	// 输出信息
 	if printCmd.Parsed() {
-		cli.PrintChain()
+		cli.PrintChain(node_id)
 	}
 	// 创建区块链
 	if createblcCmd.Parsed() {
@@ -274,7 +284,7 @@ func (cli *CLI) Run() {
 			os.Exit(1)
 		}
 		//fmt.Println(*flagCreateBlockChainAddr)
-		cli.CreateBlockchainWithGenesis(*flagCreateBlockChainAddr)
+		cli.CreateBlockchainWithGenesis(*flagCreateBlockChainAddr, node_id)
 	}
 
 	// 添加余额查询命令
@@ -284,7 +294,7 @@ func (cli *CLI) Run() {
 			PrintUsage()
 			os.Exit(1)
 		}
-		cli.GetBalance(*flagBalanceArg)
+		cli.GetBalance(*flagBalanceArg, node_id)
 	}
 
 }

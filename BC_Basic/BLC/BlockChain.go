@@ -19,17 +19,18 @@ type BlockChain struct {
 }
 
 // 判断数据库文件是否存在
-func dbExists() bool {
-	if _, err := os.Stat(DBNAME); os.IsNotExist(err) {
+func dbExists(nodeId string) bool {
+	dbName := fmt.Sprintf(DBNAME, nodeId)
+	if _, err := os.Stat(dbName); os.IsNotExist(err) {
 		return false
 	}
 	return true
 }
 
 // 由创世区块初始化区块链
-func CreateBlockChainWithGenesisBlock(addr string) *BlockChain {
+func CreateBlockChainWithGenesisBlock(addr string, nodeId string) *BlockChain {
 
-	if dbExists() == true {
+	if dbExists(nodeId) == true {
 		fmt.Println("genesis block has existed.")
 		//
 		//
@@ -49,9 +50,9 @@ func CreateBlockChainWithGenesisBlock(addr string) *BlockChain {
 		os.Exit(1)
 	}
 	//fmt.Println(dbExists())
-
+	dbName := fmt.Sprintf(DBNAME, nodeId)
 	// 打开数据库
-	db, err := bolt.Open(DBNAME, 0600, nil)
+	db, err := bolt.Open(dbName, 0600, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -179,9 +180,11 @@ func (bc *BlockChain) PrintChainInfo() {
 }
 
 // 获得区块链对象
-func GetBCObject() *BlockChain {
+// 也因节点而异
+func GetBCObject(nodeId string) *BlockChain {
+	dbName := fmt.Sprintf(DBNAME, nodeId)
 	// 读取数据库
-	db, err := bolt.Open(DBNAME, 0600, nil)
+	db, err := bolt.Open(dbName, 0600, nil)
 
 	if err != nil {
 		log.Panicf("get the object failed. %v\n", err)
@@ -200,15 +203,16 @@ func GetBCObject() *BlockChain {
 	return &BlockChain{db, top_hash}
 }
 
+// 生成Wallet_3000.dat
 // 挖矿函数, 生成新的区块，不同于AddBlock
 // 通过接受交易，进行打包确认(PoW)，然后生成新的区块
-func (bc *BlockChain) MineNewBlock(from, to, amount []string) {
+func (bc *BlockChain) MineNewBlock(from []string, to []string, amount []string, node_id string) {
 	// 接收交易
 	var txs []*TX
 	for index, addr := range from {
 		value, _ := strconv.Atoi(amount[index])
 		// 生成交易
-		tx := NewSimpleTX(addr, to[index], int64(value), bc, txs)
+		tx := NewSimpleTX(addr, to[index], int64(value), bc, txs, &UTXOSet{bc}, node_id)
 		// 多笔交易只是个 for 循环的事情
 		txs = append(txs, tx)
 		// 打包交易

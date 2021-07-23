@@ -24,7 +24,7 @@ func main() {
 	//defer blockChain.DB.Close()
 	//BLC.PrintUsage()
 
-	// 命令行测试
+	// 命令行测试G
 	cli := BLC.CLI{}
 	cli.Run()
 
