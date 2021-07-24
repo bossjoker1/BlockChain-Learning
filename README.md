@@ -794,6 +794,23 @@ C表示在这一步为client, S表示为, nodeAddr表示自己的节点ip(+port)
 
 ---
 
+## how to use：
+
+
+```
+
+Usage: 
+	startnode -- 启动服务
+	test	-- 测试程序代码
+ 	createwallets 	-- 创建钱包
+	addrlists 	-- 获取钱包地址列表
+	createblockchain -addr [address]	-- 地址
+	printchain			-- 输出区块链信息
+	send -from [addr1] -to [addr2] -amount [value] -- 转账
+	getbalance -from [addr] 	-- 查询余额
+
+```
+
 ## 总结：
 
 1. 学习了关于比特币的很多基本的理论和思想，但整个教程的特点是公链实战，所以理论部分还需要额外加强；
