@@ -62,7 +62,7 @@ func NewSimpleTX(from string, to string, amount int64, bc *BlockChain, txs []*TX
 	)
 
 	// 查找指定地址可用的UTXO
-	money, spendableUTXO := bc.FindSpendableUTXO(from, amount, txs)
+	money, spendableUTXO := us.FindSpendableUTXO(from, amount, txs)
 
 	fmt.Printf("from %s , money: %d\n", from, money)
 

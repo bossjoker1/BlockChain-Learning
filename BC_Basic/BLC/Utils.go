@@ -3,7 +3,9 @@ package BLC
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/gob"
 	"encoding/json"
+	"fmt"
 	"log"
 )
 
@@ -36,4 +38,43 @@ func Reverse(data []byte) {
 	for i, j := 0, len(data)-1; i < j; i, j = i+1, j-1 {
 		data[i], data[j] = data[j], data[i]
 	}
+}
+
+// 将结构体序列化为字节数组
+func GobEncode(data interface{}) []byte {
+	var buff bytes.Buffer
+	enc := gob.NewEncoder(&buff)
+	err := enc.Encode(data)
+	if err != nil {
+		log.Panicf("encode the data failed. %v\n", err)
+	}
+	return buff.Bytes()
+}
+
+// 命令格式
+// xxxxx(指令)xxxxx(数据...)
+
+// 将命令转化为字节数组
+// 指令长度最长为12位
+
+func CommandToBytes(cmd string) []byte {
+	var cmdbytes [12]byte
+	for i, c := range cmd {
+		cmdbytes[i] = byte(c)
+	}
+
+	return cmdbytes[:]
+}
+
+// 将字节数组转化成命令
+
+func bytesToCommand(cmdbytes []byte) string {
+	var cmd []byte // 接受命令
+
+	for _, b := range cmdbytes {
+		if b != 0x0 {
+			cmd = append(cmd, b)
+		}
+	}
+	return fmt.Sprintf("%s", cmd)
 }

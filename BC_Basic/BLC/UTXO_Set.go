@@ -160,10 +160,14 @@ func (us *UTXOSet) FindSpendableUTXO(from string, amount int64, txs []*TX) (int6
 			for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
 				txOutputs := DeserializeUTXOSet(v)
 				for _, utxo := range txOutputs.UTXOS {
-					value += utxo.Output.Value
-					spentableUTXO[hex.EncodeToString(utxo.Tx_hash)] = append(spentableUTXO[hex.EncodeToString(utxo.Tx_hash)], utxo.Out_index)
-					if value >= amount {
-						break
+
+					if utxo.Output.UnLockPubKeyWithAddr(from) {
+
+						value += utxo.Output.Value
+						spentableUTXO[hex.EncodeToString(utxo.Tx_hash)] = append(spentableUTXO[hex.EncodeToString(utxo.Tx_hash)], utxo.Out_index)
+						if value >= amount {
+							break
+						}
 					}
 				}
 			}
@@ -338,3 +342,7 @@ func (us *UTXOSet) Update() {
 		log.Panicf("update the utxodb failed. %v\n", err)
 	}
 }
+
+// 挖出新的区块时，UTXO_Set被更新
+// 去掉已花费的UTXO, 增加新挖出的未花费的UTXO
+// 如果一笔交易中的不包含UTXO了，则该交易也从UTXOSet中删掉

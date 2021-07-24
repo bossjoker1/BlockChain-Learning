@@ -1,6 +1,8 @@
 package BLC
 
-import "bytes"
+import (
+	"bytes"
+)
 
 // 交易输入
 type TxInput struct {

@@ -15,6 +15,7 @@ type CLI struct {
 
 func PrintUsage() {
 	fmt.Println("Usage: ")
+	fmt.Printf("\tstartnode -- 启动服务\n")
 	fmt.Printf("\ttest	-- 测试程序代码\n ")
 	fmt.Printf("\tcreatewallets 	-- 创建钱包\n")
 	fmt.Printf("\taddrlists 	-- 获取钱包地址列表\n")
@@ -33,6 +34,12 @@ func IsValidArgs() {
 		PrintUsage() // 打印用法
 		os.Exit(1)   // 退出程序
 	}
+}
+
+// 启动服务
+
+func (cli *CLI) StartNode(nodeId string) {
+	StartServer(nodeId)
 }
 
 func (cli *CLI) GetBalance(from string, nodeId string) {
@@ -148,6 +155,8 @@ func (cli *CLI) Run() {
 		os.Exit(1)
 	}
 
+	startNodeCmd := flag.NewFlagSet("startnode", flag.ExitOnError)
+
 	// 新建命令
 	//addBlockCmd := flag.NewFlagSet("addblock", flag.ExitOnError)
 
@@ -181,6 +190,12 @@ func (cli *CLI) Run() {
 	testCmd := flag.NewFlagSet("test", flag.ExitOnError)
 
 	switch os.Args[1] {
+	case "startnode":
+		err := startNodeCmd.Parse(os.Args[2:])
+		if err != nil {
+			log.Panicf("parse cmd of startnode failed. %v\n", err)
+		}
+
 	case "test":
 		err := testCmd.Parse(os.Args[2:])
 		if nil != err {
@@ -228,6 +243,10 @@ func (cli *CLI) Run() {
 	}
 
 	// Parsed()判断是否解析成功
+
+	if startNodeCmd.Parsed() {
+		cli.StartNode(node_id)
+	}
 
 	// 测试
 	if testCmd.Parsed() {

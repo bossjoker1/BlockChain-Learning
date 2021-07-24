@@ -9,4 +9,16 @@ const (
 	VERSION        = byte(0x00)
 	CHECKSUMLEN    = 4
 	WALLETFILEPATH = "D:\\go\\src\\BlockChain-Learning\\bolt-db\\Wallets_%s.dat"
+	PROTOCOL       = "tcp"
+	VERSION_NUM    = "version"
+	NODE_VERSION   = 1
+	CMDLENGTH      = 12
+
+	CMD_VERSION   = "version"
+	CMD_GETBLOCKS = "getblocks"
+	CMD_INV       = "inv"
+	CMD_GETDATA   = "getdata"
+	CMD_BLOCK     = "block"
+
+	BLOCK_TYPE = "block"
 )

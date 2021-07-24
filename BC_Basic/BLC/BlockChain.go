@@ -598,3 +598,81 @@ func (bc *BlockChain) FindUTXOMap() map[string]*TxOutputs {
 
 	return utxoMap
 }
+
+// 获取区块hash列表
+func (bc *BlockChain) GetBlockHashes() [][]byte {
+	var blockHashed [][]byte
+	bict := bc.Iterator()
+
+	for {
+		b := bict.Next()
+		blockHashed = append(blockHashed, b.Self_Hash)
+
+		var hashInt big.Int
+		if hashInt.Cmp(big.NewInt(0)) == 0 {
+			break
+		}
+	}
+
+	return blockHashed
+}
+
+// 获取最新区块的高度
+func (bc *BlockChain) GetHeight() int64 {
+	return bc.Iterator().Next().Height
+}
+
+// 获取指定id区块信息
+func (bc *BlockChain) GetBlockInfo(hash []byte) []byte {
+	var blockBytes []byte
+
+	err := bc.DB.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(BLOCKTABLENAME))
+		if b != nil {
+			blockBytes = b.Get(hash)
+		}
+
+		return nil
+	})
+	if err != nil {
+		log.Panicf("view the specified hash block failed. %v\n")
+		return nil
+	}
+	return blockBytes
+}
+
+func (bc *BlockChain) AddBlock(block *Block) {
+	err := bc.DB.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(BLOCKTABLENAME))
+
+		if b != nil {
+			blockBytes := b.Get(block.Self_Hash)
+
+			if blockBytes != nil {
+				// 已存在不需要同步
+				return nil
+			}
+
+			err := b.Put(block.Self_Hash, block.Serialize())
+			if err != nil {
+				log.Panicf("sync block failed. %v\n")
+			}
+			blockHash := b.Get([]byte(LATEST_HASH))
+			latestBlock := b.Get(blockHash)
+			blockDb := DeserializeBlock(latestBlock)
+
+			if blockDb.Height < block.Height {
+				b.Put([]byte(LATEST_HASH), block.Self_Hash)
+				bc.Top = block.Self_Hash
+			}
+		}
+
+		return nil
+	})
+
+	if nil != err {
+		log.Panicf("addblock failed. %v\n", err)
+	}
+
+	fmt.Println("new block is added successfully.")
+}
