@@ -1,6 +1,7 @@
 package BLC
 
 import (
+	"BlockChain-Learning/BC_Basic/Utils"
 	"bytes"
 	"crypto/sha256"
 	"fmt"
@@ -57,10 +58,10 @@ func (poW *PoW) PrepareData(nonce int) []byte {
 	data := bytes.Join([][]byte{
 		poW.Block.Pre_Hash,
 		poW.Block.HashTransactions(),
-		IntToHex(poW.Block.TimeStamp),
-		IntToHex(poW.Block.Height),
-		IntToHex(int64(nonce)),
-		IntToHex(targetBit),
+		Utils.IntToHex(poW.Block.TimeStamp),
+		Utils.IntToHex(poW.Block.Height),
+		Utils.IntToHex(int64(nonce)),
+		Utils.IntToHex(targetBit),
 	}, []byte{})
 
 	return data

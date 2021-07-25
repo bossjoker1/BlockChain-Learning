@@ -1,4 +1,4 @@
-package BLC
+package Server
 
 type BlockData struct {
 	AddrFrom string // 来自哪个节点

@@ -1,6 +1,7 @@
-package BLC
+package TX
 
 import (
+	"BlockChain-Learning/BC_Basic/Wallet"
 	"bytes"
 )
 
@@ -20,6 +21,6 @@ type TxInput struct {
 
 func (in *TxInput) UnLockWithRipemd_SHA(ripemd_sha []byte) bool {
 	// 获取双hash值
-	pubKey_hash := Ripemd160_SHA256(in.PublicKey)
+	pubKey_hash := Wallet.Ripemd160_SHA256(in.PublicKey)
 	return bytes.Compare(pubKey_hash, ripemd_sha) == 0
 }

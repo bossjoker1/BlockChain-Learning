@@ -1,6 +1,8 @@
-package BLC
+package Server
 
 import (
+	"BlockChain-Learning/BC_Basic/BLC"
+	"BlockChain-Learning/BC_Basic/Utils"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -18,13 +20,13 @@ func StartServer(nodeId string) {
 	nodeAddr = fmt.Sprintf("localhost:%s", nodeId)
 	fmt.Printf("服务节点 [%s] 启动...\n", nodeAddr)
 	// 监听节点
-	listen, err := net.Listen(PROTOCOL, nodeAddr)
+	listen, err := net.Listen(Utils.PROTOCOL, nodeAddr)
 	if err != nil {
 		log.Panicf("listen addr of %s failed. %v\n", nodeAddr, err)
 	}
 	defer listen.Close()
 
-	bc := GetBCObject(nodeId)
+	bc := BLC.GetBCObject(nodeId)
 
 	if nodeAddr != knownNodes[0] {
 		// 不是主节点, 需要向主节点发送请求同步数据
@@ -42,7 +44,7 @@ func StartServer(nodeId string) {
 		req, _ := ioutil.ReadAll(conn)
 		//fmt.Println("firt source : ", conn)
 		//fmt.Println("first req : ", req)
-		cmd := bytesToCommand(req[:CMDLENGTH])
+		cmd := Utils.BytesToCommand(req[:Utils.CMDLENGTH])
 		fmt.Printf("Receive a request on server : %s\n", cmd)
 		// 分出单独的goroutine并发的对请求进行处理
 		go HandleRequest(req, bc)
@@ -68,23 +70,23 @@ func StartServer(nodeId string) {
 //}
 
 // 处理请求
-func HandleRequest(req []byte, bc *BlockChain) {
+func HandleRequest(req []byte, bc *BLC.BlockChain) {
 	//req, _ := ioutil.ReadAll(conn)
-	cmd := bytesToCommand(req[:CMDLENGTH])
+	cmd := Utils.BytesToCommand(req[:Utils.CMDLENGTH])
 	//fmt.Printf("Receive a request: %s\n", cmd)
 
 	// 对命令进行判断
 	switch cmd {
-	case CMD_VERSION:
+	case Utils.CMD_VERSION:
 		fmt.Println("handle version")
 		HandleVersion(req, bc)
-	case CMD_GETDATA:
+	case Utils.CMD_GETDATA:
 		HandleGetData(req, bc)
-	case CMD_GETBLOCKS:
+	case Utils.CMD_GETBLOCKS:
 		HandleGetBlocks(req, bc)
-	case CMD_INV:
+	case Utils.CMD_INV:
 		HandleInv(req, bc)
-	case CMD_BLOCK:
+	case Utils.CMD_BLOCK:
 		HandleBlock(req, bc)
 	default:
 		fmt.Println("unknown cmd!")

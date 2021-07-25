@@ -1,4 +1,4 @@
-package BLC
+package Utils
 
 import (
 	"bytes"
@@ -68,7 +68,7 @@ func CommandToBytes(cmd string) []byte {
 
 // 将字节数组转化成命令
 
-func bytesToCommand(cmdbytes []byte) string {
+func BytesToCommand(cmdbytes []byte) string {
 	var cmd []byte // 接受命令
 
 	for _, b := range cmdbytes {

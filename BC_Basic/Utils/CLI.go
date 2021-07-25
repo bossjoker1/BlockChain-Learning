@@ -1,6 +1,10 @@
-package BLC
+package Utils
 
 import (
+	"BlockChain-Learning/BC_Basic/BLC"
+	"BlockChain-Learning/BC_Basic/Server"
+	"BlockChain-Learning/BC_Basic/UTXO"
+	"BlockChain-Learning/BC_Basic/Wallet"
 	"flag"
 	"fmt"
 	"log"
@@ -8,7 +12,7 @@ import (
 )
 
 type CLI struct {
-	BC *BlockChain
+	BC *BLC.BlockChain
 }
 
 // show tips
@@ -39,34 +43,34 @@ func IsValidArgs() {
 // 启动服务
 
 func (cli *CLI) StartNode(nodeId string) {
-	StartServer(nodeId)
+	Server.StartServer(nodeId)
 }
 
 func (cli *CLI) GetBalance(from string, nodeId string) {
 	// 获取指定地址的余额
 	//outPuts := GetUTXOs(from)
 	//fmt.Printf("unUTXO: %v\n", outPuts)
-	bc := GetBCObject(nodeId)
+	bc := BLC.GetBCObject(nodeId)
 	defer bc.DB.Close()
 	//amount := bc.GetBalance(from)
 	//fmt.Printf("\t addr : %s , balance : %d \n", from, amount)
 
-	utxoSet := &UTXOSet{bc}
+	utxoSet := &UTXO.UTXOSet{bc}
 	amount := utxoSet.GetBalance(from)
 	fmt.Printf("\t addr : %s , balance : %d \n", from, amount)
 }
 
 // 发送交易
 func (cli *CLI) Send(from []string, to []string, amount []string, node_id string) {
-	if dbExists(node_id) == false {
+	if BLC.DbExists(node_id) == false {
 		fmt.Println("database not exist")
 		os.Exit(1)
 	}
-	bc := GetBCObject(node_id) //获得区块链对象
+	bc := BLC.GetBCObject(node_id) //获得区块链对象
 	defer bc.DB.Close()
 	bc.MineNewBlock(from, to, amount, node_id)
 
-	utxoSet := &UTXOSet{BlockChain: bc}
+	utxoSet := &UTXO.UTXOSet{BlockChain: bc}
 	utxoSet.ResetUTXOSet() // 重置UTXO
 
 }
@@ -85,44 +89,44 @@ func (cli *CLI) Send(from []string, to []string, amount []string, node_id string
 
 // 输出区块链信息
 func (cli *CLI) PrintChain(nodeId string) {
-	if dbExists(nodeId) == false {
+	if BLC.DbExists(nodeId) == false {
 		fmt.Println("database not exist.")
 		os.Exit(1)
 	}
-	blockChain := GetBCObject(nodeId) // 获得区块链对象
+	blockChain := BLC.GetBCObject(nodeId) // 获得区块链对象
 	defer blockChain.DB.Close()
 	blockChain.PrintChainInfo()
 }
 
 // 创建区块链
 func (cli *CLI) CreateBlockchainWithGenesis(addr string, nodeId string) {
-	blockChain := CreateBlockChainWithGenesisBlock(addr, nodeId)
+	blockChain := BLC.CreateBlockChainWithGenesisBlock(addr, nodeId)
 	defer blockChain.DB.Close()
 
 	// 设置UTXOSet操作
 
-	utxoSet := &UTXOSet{BlockChain: blockChain}
+	utxoSet := &UTXO.UTXOSet{BlockChain: blockChain}
 	// 更新
 	utxoSet.ResetUTXOSet()
 }
 
 // 创建钱包集合
 func (cli *CLI) CreateWallets(node_id string) {
-	wallets, _ := NewWallets(node_id)
+	wallets, _ := Wallet.NewWallets(node_id)
 	wallets.CreateWallet(node_id)
 	fmt.Printf("wallet: %v\n", wallets)
 }
 
 func (cli *CLI) GetAddrLists(node_id string) {
 	fmt.Println("print all wallets' address.")
-	wallets, _ := NewWallets(node_id)
+	wallets, _ := Wallet.NewWallets(node_id)
 	for addr, _ := range wallets.Wallets {
 		fmt.Printf("address : [%s]\n", addr)
 	}
 }
 
 func (cli *CLI) TestMethod(nodeid string) {
-	blockchain := GetBCObject(nodeid)
+	blockchain := BLC.GetBCObject(nodeid)
 	defer blockchain.DB.Close()
 
 	utxoMap := blockchain.FindUTXOMap()
@@ -136,10 +140,10 @@ func (cli *CLI) TestMethod(nodeid string) {
 }
 
 func (cli *CLI) TestResetUTXO(nodeid string) {
-	bc := GetBCObject(nodeid)
+	bc := BLC.GetBCObject(nodeid)
 	defer bc.DB.Close()
 
-	utxoSet := &UTXOSet{BlockChain: bc}
+	utxoSet := &UTXO.UTXOSet{BlockChain: bc}
 	utxoSet.ResetUTXOSet() // 重置UTXO
 }
 

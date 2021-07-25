@@ -1,6 +1,10 @@
-package BLC
+package UTXO
 
 import (
+	"BlockChain-Learning/BC_Basic/BLC"
+	"BlockChain-Learning/BC_Basic/TX"
+	"BlockChain-Learning/BC_Basic/Utils"
+	"BlockChain-Learning/BC_Basic/Wallet"
 	"bytes"
 	"encoding/gob"
 	"encoding/hex"
@@ -14,7 +18,7 @@ import (
 // UTXOSet结构
 // 保存指定区块链中所有的utxos
 type UTXOSet struct {
-	BlockChain *BlockChain
+	BlockChain *BLC.BlockChain
 }
 
 // 重置utxo
@@ -23,11 +27,11 @@ func (us *UTXOSet) ResetUTXOSet() {
 	// 覆盖
 
 	err := us.BlockChain.DB.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(UTXOTABLENAME))
+		b := tx.Bucket([]byte(Utils.UTXOTABLENAME))
 		if b != nil {
-			_ = tx.DeleteBucket([]byte(UTXOTABLENAME))
+			_ = tx.DeleteBucket([]byte(Utils.UTXOTABLENAME))
 		}
-		c, _ := tx.CreateBucketIfNotExists([]byte(UTXOTABLENAME))
+		c, _ := tx.CreateBucketIfNotExists([]byte(Utils.UTXOTABLENAME))
 
 		if c != nil {
 			// 先查找未花费的输出
@@ -101,7 +105,7 @@ func (us *UTXOSet) FindUTXOWithAddr(addr string) []*UTXO {
 
 	err := us.BlockChain.DB.View(func(tx *bolt.Tx) error {
 
-		b := tx.Bucket([]byte(UTXOTABLENAME))
+		b := tx.Bucket([]byte(Utils.UTXOTABLENAME))
 		c := b.Cursor() // 获取游标
 
 		// 遍历每个utxo
@@ -129,7 +133,7 @@ func (us *UTXOSet) FindUTXOWithAddr(addr string) []*UTXO {
 
 // 查找可花费的utxo
 
-func (us *UTXOSet) FindSpendableUTXO(from string, amount int64, txs []*TX) (int64, map[string][]int) {
+func (us *UTXOSet) FindSpendableUTXO(from string, amount int64, txs []*TX.TX) (int64, map[string][]int) {
 	// 查找整个utxo表
 
 	// 先直接考虑未打包的utxo，不够再去表中查
@@ -154,7 +158,7 @@ func (us *UTXOSet) FindSpendableUTXO(from string, amount int64, txs []*TX) (int6
 	// 在获取到未打包交易后，钱还是不够，再从utxo表中试图获取(也可能还是不够，则余额不足，转账失败)
 	_ = us.BlockChain.DB.View(func(tx *bolt.Tx) error {
 		// 先获取表
-		b := tx.Bucket([]byte(UTXOTABLENAME))
+		b := tx.Bucket([]byte(Utils.UTXOTABLENAME))
 		if b != nil {
 			cursor := b.Cursor() // 游标有序遍历
 			for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
@@ -182,7 +186,7 @@ func (us *UTXOSet) FindSpendableUTXO(from string, amount int64, txs []*TX) (int6
 }
 
 // 从未打包的交易中进行查找
-func (us *UTXOSet) FindUnPackageSpendableUTXOs(from string, txs []*TX) []*UTXO {
+func (us *UTXOSet) FindUnPackageSpendableUTXOs(from string, txs []*TX.TX) []*UTXO {
 	var unUtxos []*UTXO
 
 	spendTXOutputs := make(map[string][]int) // 每个交易中已经被引用(花费)的output的索引
@@ -192,8 +196,8 @@ func (us *UTXOSet) FindUnPackageSpendableUTXOs(from string, txs []*TX) []*UTXO {
 
 		if !tx.IsCoinbase() {
 			for _, tin := range tx.Tins {
-				publicKeyHash := Base58Decode([]byte(from)) // 获取公钥hash
-				ripemd_sha := publicKeyHash[1 : len(publicKeyHash)-CHECKSUMLEN]
+				publicKeyHash := BLC.Base58Decode([]byte(from)) // 获取公钥hash
+				ripemd_sha := publicKeyHash[1 : len(publicKeyHash)-Utils.CHECKSUMLEN]
 				if tin.UnLockWithRipemd_SHA(ripemd_sha) {
 					// 添加到已花费输出map中
 					key := hex.EncodeToString(tin.Tx_hash)
@@ -248,7 +252,7 @@ func (us *UTXOSet) Update() {
 	// 获取最新区块
 	latest_block := us.BlockChain.Iterator().Next()
 	// 存放最新区块的所有输入
-	inputs := []*TxInput{} // 即表中的哪些utxo被引用了
+	inputs := []*TX.TxInput{} // 即表中的哪些utxo被引用了
 
 	// 需要新存入的outputs
 
@@ -272,7 +276,7 @@ func (us *UTXOSet) Update() {
 			isSpent := false
 			for _, in := range inputs {
 				if in.Index_out == index && bytes.Compare(tx.Tx_hash, in.Tx_hash) == 0 {
-					if bytes.Compare(out.PubkeyHash, Ripemd160_SHA256(in.PublicKey)) == 0 {
+					if bytes.Compare(out.PubkeyHash, Wallet.Ripemd160_SHA256(in.PublicKey)) == 0 {
 						isSpent = true
 						continue
 					}
@@ -290,7 +294,7 @@ func (us *UTXOSet) Update() {
 
 	// 4.更新
 	err := us.BlockChain.DB.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(UTXOTABLENAME))
+		b := tx.Bucket([]byte(Utils.UTXOTABLENAME))
 		if b != nil {
 			// 删除已花费输出
 			for _, in := range inputs {
@@ -310,7 +314,7 @@ func (us *UTXOSet) Update() {
 				for _, utxo := range txOutputs.UTXOS {
 					// 判断具体是哪一个输出被引用了
 
-					if in.Index_out == utxo.Out_index && bytes.Compare(utxo.Output.PubkeyHash, Ripemd160_SHA256(in.PublicKey)) == 0 {
+					if in.Index_out == utxo.Out_index && bytes.Compare(utxo.Output.PubkeyHash, Wallet.Ripemd160_SHA256(in.PublicKey)) == 0 {
 						isDel = true
 					} else {
 						UTXOS = append(UTXOS, utxo)

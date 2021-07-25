@@ -1,6 +1,7 @@
 package BLC
 
 import (
+	"BlockChain-Learning/BC_Basic/TX"
 	"bytes"
 	"encoding/gob"
 	"log"
@@ -15,14 +16,14 @@ type Block struct {
 	Height    int64 // 区块高度(代表区块唯一号码)
 	Pre_Hash  []byte
 	Self_Hash []byte
-	Txs       []*TX
+	Txs       []*TX.TX
 	//Data      []byte // 交易结构，之后定义
 	//随机数r & merkle root_hash
 	Nonce int64 // 记录碰撞成功后结束的随机数值
 }
 
 // 创建新区块
-func NewBlock(height int64, pre_hash []byte, txs []*TX) *Block {
+func NewBlock(height int64, pre_hash []byte, txs []*TX.TX) *Block {
 	block := &Block{Height: height, Pre_Hash: pre_hash, Txs: txs, TimeStamp: time.Now().Unix()}
 	//block.SetHash()
 	pow := NewPoW(block)
@@ -44,7 +45,7 @@ func NewBlock(height int64, pre_hash []byte, txs []*TX) *Block {
 //}
 
 // 生成创世区块
-func CreateGenesisBlock(txs []*TX) *Block {
+func CreateGenesisBlock(txs []*TX.TX) *Block {
 	return NewBlock(1, nil, txs)
 }
 

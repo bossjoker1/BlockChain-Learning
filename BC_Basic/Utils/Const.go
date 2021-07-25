@@ -1,4 +1,4 @@
-package BLC
+package Utils
 
 const (
 	DBNAME         = "D:\\go\\src\\BlockChain-Learning\\bolt-db\\bc_%s.db"

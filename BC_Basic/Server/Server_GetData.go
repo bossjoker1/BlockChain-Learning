@@ -1,4 +1,4 @@
-package BLC
+package Server
 
 type GetData struct {
 	AddrFrom string

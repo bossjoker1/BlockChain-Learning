@@ -1,6 +1,7 @@
 package BLC
 
 import (
+	"BlockChain-Learning/BC_Basic/Utils"
 	"bytes"
 	"math/big"
 )
@@ -26,7 +27,7 @@ func Base58Encode(input []byte) []byte {
 		result = append(result, b58Alphabet[mod.Int64()])
 	}
 	// 反转切片
-	Reverse(result)
+	Utils.Reverse(result)
 
 	for b := range input { // b 代表切片下标
 		if b == 0x00 {

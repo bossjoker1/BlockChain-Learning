@@ -1,4 +1,4 @@
-package BLC
+package Server
 
 // 代表当前节点版本信息，决定是否同步
 type Version struct {

@@ -838,3 +838,50 @@ Usage:
 - debug, 主要是该打log的都得打，该判断的都得不厌其烦的判断(go决定的没办法)
 
 - 收获还是挺多的，接下来还是得补下理论知识。~~完结撒花~~
+
+给它调整了下目录，更加有层次些：
+
+```
+D:.
+│  go.mod
+│  go.sum
+│  main.exe
+│  main.go
+│
+├─BLC
+│      Base58.go
+│      Block.go
+│      BlockChain.go
+│      BlockChainIterator.go
+│      Merkle_Tree.go
+│      PoW.go
+│
+├─Server
+│      Server.go
+│      ServerSends.go
+│      Server_Block.go
+│      Server_GetBlocks.go
+│      Server_GetData.go
+│      Server_Inv.go
+│      Server_Version.go
+│      SeverHandles.go
+│
+├─TX
+│      TX.go
+│      TxInput.go
+│      TxOutput.go
+│
+├─Utils
+│      CLI.go
+│      Const.go
+│      Utils.go
+│
+├─UTXO
+│      TxOutputs.go
+│      UTXO.go
+│      UTXO_Set.go
+│
+└─Wallet
+        Wallet.go
+        Wallets.go
+```

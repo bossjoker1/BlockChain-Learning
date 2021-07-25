@@ -1,6 +1,7 @@
-package BLC
+package Wallet
 
 import (
+	"BlockChain-Learning/BC_Basic/Utils"
 	"bytes"
 	"crypto/elliptic"
 	"encoding/gob"
@@ -21,7 +22,7 @@ type Wallets struct {
 func NewWallets(node_id string) (*Wallets, error) {
 	// 文件操作
 	// 判断文件是否存在
-	walletFile := fmt.Sprintf(WALLETFILEPATH, node_id)
+	walletFile := fmt.Sprintf(Utils.WALLETFILEPATH, node_id)
 	if _, err := os.Stat(walletFile); os.IsNotExist(err) {
 		wallets := &Wallets{}
 		wallets.Wallets = make(map[string]*Wallet)
@@ -66,7 +67,7 @@ func (wallets *Wallets) SaveWallets(nodeId string) {
 	if err != nil {
 		log.Panicf("encode the wallets failed. %v\n", err)
 	}
-	walletFile := fmt.Sprintf(WALLETFILEPATH, nodeId)
+	walletFile := fmt.Sprintf(Utils.WALLETFILEPATH, nodeId)
 	// 写入文件
 	err = ioutil.WriteFile(walletFile, content.Bytes(), 0644)
 

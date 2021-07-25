@@ -1,6 +1,8 @@
-package BLC
+package Wallet
 
 import (
+	"BlockChain-Learning/BC_Basic/BLC"
+	"BlockChain-Learning/BC_Basic/Utils"
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -59,13 +61,13 @@ func (w *Wallet) GetAddr() []byte {
 	// 获取 pubKey hash
 	pubHash := Ripemd160_SHA256(w.PublicKey)
 	// 获取version, 加到前缀
-	verison_pubHash := append([]byte{VERSION}, pubHash...)
+	verison_pubHash := append([]byte{Utils.VERSION}, pubHash...)
 	// 生成checkSum
 	checkSum := CheckSum(verison_pubHash)
 	bytes := append(verison_pubHash, checkSum...)
 
 	// Base58编码
-	return Base58Encode(bytes)
+	return BLC.Base58Encode(bytes)
 }
 
 // 生成校验和
@@ -74,17 +76,17 @@ func CheckSum(payload []byte) []byte {
 	first_hash := sha256.Sum256(payload)
 	second_hash := sha256.Sum256(first_hash[:])
 
-	return second_hash[:CHECKSUMLEN] // 取固定长度
+	return second_hash[:Utils.CHECKSUMLEN] // 取固定长度
 
 }
 
 // 判断地址有效性
 func IsValidforAddr(addr []byte) bool {
 	// base58解码
-	decodeAddr := Base58Decode(addr)
+	decodeAddr := BLC.Base58Decode(addr)
 	// 拆分，checkSum发挥作用
-	checkSum := decodeAddr[len(decodeAddr)-CHECKSUMLEN:]
-	version_pubKeyHash := decodeAddr[:len(decodeAddr)-CHECKSUMLEN]
+	checkSum := decodeAddr[len(decodeAddr)-Utils.CHECKSUMLEN:]
+	version_pubKeyHash := decodeAddr[:len(decodeAddr)-Utils.CHECKSUMLEN]
 	checkBytes := CheckSum(version_pubKeyHash)
 	if bytes.Compare(checkSum, checkBytes) == 0 {
 		return true

@@ -1,6 +1,8 @@
 package main
 
-import "BlockChain-Learning/BC_Basic/BLC"
+import (
+	"BlockChain-Learning/BC_Basic/Utils"
+)
 
 func main() {
 	//blockChain := BLC.CreateBlockChainWithGenesisBlock()
@@ -25,7 +27,7 @@ func main() {
 	//BLC.PrintUsage()
 
 	// 命令行测试G
-	cli := BLC.CLI{}
+	cli := Utils.CLI{}
 	cli.Run()
 
 	//base58编码测试

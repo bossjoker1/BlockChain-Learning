@@ -1,6 +1,10 @@
-package BLC
+package TX
 
 import (
+	"BlockChain-Learning/BC_Basic/BLC"
+	"BlockChain-Learning/BC_Basic/UTXO"
+	"BlockChain-Learning/BC_Basic/Utils"
+	"BlockChain-Learning/BC_Basic/Wallet"
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -33,7 +37,7 @@ func (tx *TX) HashTX() {
 		log.Panicf("tx hash generate failed. %v\n ", err)
 	}
 	tm := time.Now().Unix()
-	txhashBytes := bytes.Join([][]byte{res.Bytes(), IntToHex(tm)}, []byte{})
+	txhashBytes := bytes.Join([][]byte{res.Bytes(), Utils.IntToHex(tm)}, []byte{})
 	hash := sha256.Sum256(txhashBytes)
 	tx.Tx_hash = hash[:]
 }
@@ -46,7 +50,7 @@ func NewCoinBaseTX(addr string) *TX {
 	// 添加时间参数
 	txInput := &TxInput{[]byte{}, -1, nil, nil}
 	// 输出
-	txOutput := NewTXOutput(MINEAWARD, addr)
+	txOutput := NewTXOutput(Utils.MINEAWARD, addr)
 	txCoinbase := &TX{nil, []*TxInput{txInput}, []*TxOutput{txOutput}}
 	// hash
 	txCoinbase.HashTX()
@@ -55,7 +59,7 @@ func NewCoinBaseTX(addr string) *TX {
 }
 
 // 生成 转账交易
-func NewSimpleTX(from string, to string, amount int64, bc *BlockChain, txs []*TX, us *UTXOSet, node_id string) *TX {
+func NewSimpleTX(from string, to string, amount int64, bc *BLC.BlockChain, txs []*TX, us *UTXO.UTXOSet, node_id string) *TX {
 	var (
 		txInputs  []*TxInput
 		txOutputs []*TxOutput
@@ -66,7 +70,7 @@ func NewSimpleTX(from string, to string, amount int64, bc *BlockChain, txs []*TX
 
 	fmt.Printf("from %s , money: %d\n", from, money)
 
-	wallets, _ := NewWallets(node_id)
+	wallets, _ := Wallet.NewWallets(node_id)
 	wallet := wallets.Wallets[from]
 	pubKey := wallet.PublicKey
 

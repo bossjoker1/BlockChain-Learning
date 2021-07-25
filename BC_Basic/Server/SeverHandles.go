@@ -1,6 +1,9 @@
-package BLC
+package Server
 
 import (
+	"BlockChain-Learning/BC_Basic/BLC"
+	"BlockChain-Learning/BC_Basic/UTXO"
+	"BlockChain-Learning/BC_Basic/Utils"
 	"bytes"
 	"encoding/gob"
 	"fmt"
@@ -9,13 +12,13 @@ import (
 
 //1. `version` : 验证当前节点的末端区块是不是最新区块，可以通过 `Height`来判断。
 
-func HandleVersion(req []byte, bc *BlockChain) {
+func HandleVersion(req []byte, bc *BLC.BlockChain) {
 	fmt.Println("handle version in func")
 	var buff bytes.Buffer
 	var data Version
 
 	// 解析req中的数据
-	dataBytes := req[CMDLENGTH:]
+	dataBytes := req[Utils.CMDLENGTH:]
 	buff.Write(dataBytes)
 	decoder := gob.NewDecoder(&buff)
 	err := decoder.Decode(&data)
@@ -36,12 +39,12 @@ func HandleVersion(req []byte, bc *BlockChain) {
 
 //2. `GetBlocks` : 从最长的链上面获取区块
 
-func HandleGetBlocks(req []byte, bc *BlockChain) {
+func HandleGetBlocks(req []byte, bc *BLC.BlockChain) {
 	var buff bytes.Buffer
 	var data Get_Blocks
 
 	// 解析req中的数据
-	dataBytes := req[CMDLENGTH:]
+	dataBytes := req[Utils.CMDLENGTH:]
 	buff.Write(dataBytes)
 	decoder := gob.NewDecoder(&buff)
 	err := decoder.Decode(&data)
@@ -49,17 +52,17 @@ func HandleGetBlocks(req []byte, bc *BlockChain) {
 		log.Panicf("decode the Getblocks data failed. %v\n", err)
 	}
 	hashes := bc.GetBlockHashes()
-	SendInv(data.AddrFrom, BLOCK_TYPE, hashes)
+	SendInv(data.AddrFrom, Utils.BLOCK_TYPE, hashes)
 }
 
 //3. `Inv` : 向其他节点展示当前节点有哪些区块
 
-func HandleInv(req []byte, bc *BlockChain) {
+func HandleInv(req []byte, bc *BLC.BlockChain) {
 	var buff bytes.Buffer
 	var data Inv
 
 	// 解析req中的数据
-	dataBytes := req[CMDLENGTH:]
+	dataBytes := req[Utils.CMDLENGTH:]
 	buff.Write(dataBytes)
 	decoder := gob.NewDecoder(&buff)
 	err := decoder.Decode(&data)
@@ -69,17 +72,17 @@ func HandleInv(req []byte, bc *BlockChain) {
 	// 把需要展示的区块发回
 	// SendGetData
 	blockHash := data.Hashes[0]
-	SendGetData(data.AddrFrom, BLOCK_TYPE, blockHash)
+	SendGetData(data.AddrFrom, Utils.BLOCK_TYPE, blockHash)
 }
 
 //4. `GetData` : 请求一个指定的区块
 
-func HandleGetData(req []byte, bc *BlockChain) {
+func HandleGetData(req []byte, bc *BLC.BlockChain) {
 	var buff bytes.Buffer
 	var data GetData
 
 	// 解析req中的数据
-	dataBytes := req[CMDLENGTH:]
+	dataBytes := req[Utils.CMDLENGTH:]
 	buff.Write(dataBytes)
 	decoder := gob.NewDecoder(&buff)
 	err := decoder.Decode(&data)
@@ -96,12 +99,12 @@ func HandleGetData(req []byte, bc *BlockChain) {
 
 //5. `block` : 接受到新区块的时候，进行处理
 
-func HandleBlock(req []byte, bc *BlockChain) {
+func HandleBlock(req []byte, bc *BLC.BlockChain) {
 	var buff bytes.Buffer
 	var data BlockData
 
 	// 解析req中的数据
-	dataBytes := req[CMDLENGTH:]
+	dataBytes := req[Utils.CMDLENGTH:]
 	buff.Write(dataBytes)
 	decoder := gob.NewDecoder(&buff)
 	err := decoder.Decode(&data)
@@ -109,13 +112,13 @@ func HandleBlock(req []byte, bc *BlockChain) {
 		log.Panicf("decode the inv failed. %v\n", err)
 	}
 	blockBytes := data.Block
-	b := DeserializeBlock(blockBytes)
+	b := BLC.DeserializeBlock(blockBytes)
 	// 上传bc数据库
 	bc.AddBlock(b)
 
 	// 更新utxo表
 
-	us := &UTXOSet{bc}
+	us := &UTXO.UTXOSet{bc}
 
 	us.Update()
 }

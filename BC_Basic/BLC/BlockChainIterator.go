@@ -1,6 +1,7 @@
 package BLC
 
 import (
+	"BlockChain-Learning/BC_Basic/Utils"
 	"github.com/boltdb/bolt"
 	"log"
 )
@@ -23,7 +24,7 @@ func (bc *BlockChain) Iterator() *BlockChainIterator {
 func (it *BlockChainIterator) Next() *Block {
 	var block *Block
 	err := it.DB.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(BLOCKTABLENAME))
+		b := tx.Bucket([]byte(Utils.BLOCKTABLENAME))
 		if b != nil {
 			// 获取指定hash区块
 			cur_BlockBytes := b.Get(it.Curr_Hash)
