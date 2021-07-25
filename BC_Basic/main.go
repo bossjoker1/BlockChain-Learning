@@ -1,7 +1,7 @@
 package main
 
 import (
-	"BlockChain-Learning/BC_Basic/Utils"
+	"BlockChain-Learning/BC_Basic/CLI"
 )
 
 func main() {
@@ -27,7 +27,7 @@ func main() {
 	//BLC.PrintUsage()
 
 	// 命令行测试G
-	cli := Utils.CLI{}
+	cli := CLI.CLI{}
 	cli.Run()
 
 	//base58编码测试

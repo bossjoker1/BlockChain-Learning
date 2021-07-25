@@ -1,10 +1,7 @@
 package BLC
 
 import (
-	"BlockChain-Learning/BC_Basic/TX"
-	"BlockChain-Learning/BC_Basic/UTXO"
 	"BlockChain-Learning/BC_Basic/Utils"
-	"BlockChain-Learning/BC_Basic/Wallet"
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/hex"
@@ -76,10 +73,10 @@ func CreateBlockChainWithGenesisBlock(addr string, nodeId string) *BlockChain {
 		if b != nil {
 
 			// 生成交易
-			txCoinbase := TX.NewCoinBaseTX(addr)
+			txCoinbase := NewCoinBaseTX(addr)
 
 			// 不为空则创建创世区块
-			genesisBlock := CreateGenesisBlock([]*TX.TX{txCoinbase})
+			genesisBlock := CreateGenesisBlock([]*TX{txCoinbase})
 			// 用hash值作为唯一key
 			err := b.Put(genesisBlock.Self_Hash, genesisBlock.Serialize())
 			if err != nil {
@@ -212,11 +209,11 @@ func GetBCObject(nodeId string) *BlockChain {
 // 通过接受交易，进行打包确认(PoW)，然后生成新的区块
 func (bc *BlockChain) MineNewBlock(from []string, to []string, amount []string, node_id string) {
 	// 接收交易
-	var txs []*TX.TX
+	var txs []*TX
 	for index, addr := range from {
 		value, _ := strconv.Atoi(amount[index])
 		// 生成交易
-		tx := TX.NewSimpleTX(addr, to[index], int64(value), bc, txs, &UTXO.UTXOSet{bc}, node_id)
+		tx := NewSimpleTX(addr, to[index], int64(value), bc, txs, &UTXOSet{bc}, node_id)
 		// 多笔交易只是个 for 循环的事情
 		txs = append(txs, tx)
 		// 打包交易
@@ -225,7 +222,7 @@ func (bc *BlockChain) MineNewBlock(from []string, to []string, amount []string, 
 	// 给矿工一定的奖励
 	// 默认设置地址列表中的第一个地址为抢夺到几张权的矿工地址
 	// 所以这里取from[0]
-	tx := TX.NewCoinBaseTX(from[0])
+	tx := NewCoinBaseTX(from[0])
 	txs = append(txs, tx)
 
 	var block *Block
@@ -240,7 +237,7 @@ func (bc *BlockChain) MineNewBlock(from []string, to []string, amount []string, 
 		return nil
 	})
 
-	var txsc []*TX.TX // 关联交易
+	var txsc []*TX // 关联交易
 	// 在生成新区块之前需要进行验证签名
 	for _, tx := range txs {
 		// 每一笔交易都得验证
@@ -273,11 +270,11 @@ func (bc *BlockChain) MineNewBlock(from []string, to []string, amount []string, 
 
 // 返回指定地址的余额
 
-func (bc *BlockChain) GetUTXOs(addr string, txs []*TX.TX) []*UTXO.UTXO {
+func (bc *BlockChain) GetUTXOs(addr string, txs []*TX) []*UTXO {
 	fmt.Printf("the address is %s\n", addr)
 
 	// 存储未花费的输出
-	var utxos []*UTXO.UTXO
+	var utxos []*UTXO
 	// 存储所有已花费的输出
 	// key: 每个input所”引用“的hash
 	// value: 存 index 用 []int
@@ -318,11 +315,11 @@ func (bc *BlockChain) GetUTXOs(addr string, txs []*TX.TX) []*UTXO.UTXO {
 					}
 					// 遍历完所有都没有被花费，才能加入到utxos中
 					if isSpentTXOutput == false {
-						utxo := &UTXO.UTXO{tx.Tx_hash, index, tout}
+						utxo := &UTXO{tx.Tx_hash, index, tout}
 						utxos = append(utxos, utxo)
 					}
 				} else {
-					utxo := &UTXO.UTXO{tx.Tx_hash, index, tout}
+					utxo := &UTXO{tx.Tx_hash, index, tout}
 					utxos = append(utxos, utxo)
 				}
 			}
@@ -380,7 +377,7 @@ func (bc *BlockChain) GetUTXOs(addr string, txs []*TX.TX) []*UTXO.UTXO {
 			// 在output链中，index也是从0开始
 		work:
 			for index, tout := range tx.Touts {
-				var utxo *UTXO.UTXO
+				var utxo *UTXO
 				// 地址验证(钱是不是输出给指定传入的地址)
 				if tout.UnLockPubKeyWithAddr(addr) {
 					// 判断是否是未花费的输出
@@ -399,11 +396,11 @@ func (bc *BlockChain) GetUTXOs(addr string, txs []*TX.TX) []*UTXO.UTXO {
 						}
 						// 遍历完所有都没有被花费，才能加入到utxos中
 						if isSpentTXOutput == false {
-							utxo = &UTXO.UTXO{tx.Tx_hash, index, tout}
+							utxo = &UTXO{tx.Tx_hash, index, tout}
 							utxos = append(utxos, utxo)
 						}
 					} else {
-						utxo = &UTXO.UTXO{tx.Tx_hash, index, tout}
+						utxo = &UTXO{tx.Tx_hash, index, tout}
 						utxos = append(utxos, utxo)
 					}
 				}
@@ -424,7 +421,7 @@ func (bc *BlockChain) GetUTXOs(addr string, txs []*TX.TX) []*UTXO.UTXO {
 
 // 通过指定地址查找余额
 func (bc *BlockChain) GetBalance(addr string) int64 {
-	utxos := bc.GetUTXOs(addr, []*TX.TX{})
+	utxos := bc.GetUTXOs(addr, []*TX{})
 	var amount int64
 	for _, utxo := range utxos {
 		amount += utxo.Output.Value
@@ -435,7 +432,7 @@ func (bc *BlockChain) GetBalance(addr string) int64 {
 // 转账
 // 查找可用的UTXO，超过需要的资金即可
 // 目标地址不用传，在cmdline中指明
-func (bc *BlockChain) FindSpendableUTXO(from string, amount int64, txs []*TX.TX) (int64, map[string][]int) {
+func (bc *BlockChain) FindSpendableUTXO(from string, amount int64, txs []*TX) (int64, map[string][]int) {
 	//查找的值总和: value
 	var value int64
 	// 可用的UTXO: spendableUTXO
@@ -461,7 +458,7 @@ func (bc *BlockChain) FindSpendableUTXO(from string, amount int64, txs []*TX.TX)
 
 // 查找指定的交易
 // hash_id : input所引用的交易hash
-func (bc *BlockChain) FindTX(hash_id []byte, txs []*TX.TX) TX.TX {
+func (bc *BlockChain) FindTX(hash_id []byte, txs []*TX) TX {
 	// 查找缓存中是否有符合条件的关联交易
 	for _, tx := range txs {
 		if bytes.Compare(tx.Tx_hash, hash_id) == 0 {
@@ -485,18 +482,18 @@ func (bc *BlockChain) FindTX(hash_id []byte, txs []*TX.TX) TX.TX {
 		}
 	}
 	// 没找到，返回空的交易
-	return TX.TX{}
+	return TX{}
 }
 
 // 交易签名
-func (bc *BlockChain) SignTX(tx *TX.TX, priKey ecdsa.PrivateKey, txs []*TX.TX) {
+func (bc *BlockChain) SignTX(tx *TX, priKey ecdsa.PrivateKey, txs []*TX) {
 	// coinbase不需要签名
 	if tx.IsCoinbase() {
 		return
 	}
 
 	// 处理input, 查找tx的input所引用的output所属的交易
-	preTXs := make(map[string]TX.TX)
+	preTXs := make(map[string]TX)
 	for _, tin := range tx.Tins {
 		// 查找所引用的交易
 		preTX := bc.FindTX(tin.Tx_hash, txs)
@@ -509,14 +506,14 @@ func (bc *BlockChain) SignTX(tx *TX.TX, priKey ecdsa.PrivateKey, txs []*TX.TX) {
 
 }
 
-func (bc *BlockChain) VerifyTX(tx *TX.TX, txs []*TX.TX) bool {
+func (bc *BlockChain) VerifyTX(tx *TX, txs []*TX) bool {
 	// coinbase不需要签名
 	if tx.IsCoinbase() {
 		return true
 	}
 
 	// 查找指定交易的关联交易
-	preTXs := make(map[string]TX.TX)
+	preTXs := make(map[string]TX)
 
 	for _, tin := range tx.Tins {
 		preTX := bc.FindTX(tin.Tx_hash, txs)
@@ -526,24 +523,24 @@ func (bc *BlockChain) VerifyTX(tx *TX.TX, txs []*TX.TX) bool {
 	return tx.Verify(preTXs)
 }
 
-func (bc *BlockChain) FindUTXOMap() map[string]*UTXO.TxOutputs {
+func (bc *BlockChain) FindUTXOMap() map[string]*TxOutputs {
 	bcit := bc.Iterator()
 
 	// 存储所有已花费的UTXO
 	// key : 指定交易hash
 	// value: 代表所有引用了该指定交易的output的输入
 
-	spentUTXOMap := make(map[string][]*TX.TxInput)
+	spentUTXOMap := make(map[string][]*TxInput)
 
 	// 与上面对应
-	utxoMap := make(map[string]*UTXO.TxOutputs)
+	utxoMap := make(map[string]*TxOutputs)
 
 	for {
 		block := bcit.Next()
 		// 遍历每个区块中的交易
 		for i := len(block.Txs) - 1; i >= 0; i-- {
 			// 保存输出
-			txOutputs := &UTXO.TxOutputs{[]*UTXO.UTXO{}}
+			txOutputs := &TxOutputs{[]*UTXO{}}
 			// 获取每一个交易
 			tx := block.Txs[i]
 
@@ -570,7 +567,7 @@ func (bc *BlockChain) FindUTXOMap() map[string]*UTXO.TxOutputs {
 						outPubKey := out.PubkeyHash
 						inPubkey := in.PublicKey
 						// 检查是被哪个引用了, 或者没被引用
-						if bytes.Compare(outPubKey, Wallet.Ripemd160_SHA256(inPubkey)) == 0 &&
+						if bytes.Compare(outPubKey, Ripemd160_SHA256(inPubkey)) == 0 &&
 							i == in.Index_out {
 							// 索引也必须相等，因为如果是拆分的两个不同的utxo属于同一个人，那么还得继续细分到底引用的是哪一个
 							isSpent = true
@@ -579,12 +576,12 @@ func (bc *BlockChain) FindUTXOMap() map[string]*UTXO.TxOutputs {
 					}
 
 					if !isSpent {
-						utxo := &UTXO.UTXO{Tx_hash: tx.Tx_hash, Out_index: i, Output: out}
+						utxo := &UTXO{Tx_hash: tx.Tx_hash, Out_index: i, Output: out}
 						txOutputs.UTXOS = append(txOutputs.UTXOS, utxo)
 					}
 				} else {
 					// 说明都是未花费的输出
-					utxo := &UTXO.UTXO{Tx_hash: tx.Tx_hash, Out_index: i, Output: out}
+					utxo := &UTXO{Tx_hash: tx.Tx_hash, Out_index: i, Output: out}
 					txOutputs.UTXOS = append(txOutputs.UTXOS, utxo)
 				}
 

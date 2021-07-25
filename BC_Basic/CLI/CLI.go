@@ -1,10 +1,9 @@
-package Utils
+package CLI
 
 import (
 	"BlockChain-Learning/BC_Basic/BLC"
 	"BlockChain-Learning/BC_Basic/Server"
-	"BlockChain-Learning/BC_Basic/UTXO"
-	"BlockChain-Learning/BC_Basic/Wallet"
+	"BlockChain-Learning/BC_Basic/Utils"
 	"flag"
 	"fmt"
 	"log"
@@ -55,7 +54,7 @@ func (cli *CLI) GetBalance(from string, nodeId string) {
 	//amount := bc.GetBalance(from)
 	//fmt.Printf("\t addr : %s , balance : %d \n", from, amount)
 
-	utxoSet := &UTXO.UTXOSet{bc}
+	utxoSet := &BLC.UTXOSet{bc}
 	amount := utxoSet.GetBalance(from)
 	fmt.Printf("\t addr : %s , balance : %d \n", from, amount)
 }
@@ -70,7 +69,7 @@ func (cli *CLI) Send(from []string, to []string, amount []string, node_id string
 	defer bc.DB.Close()
 	bc.MineNewBlock(from, to, amount, node_id)
 
-	utxoSet := &UTXO.UTXOSet{BlockChain: bc}
+	utxoSet := &BLC.UTXOSet{BlockChain: bc}
 	utxoSet.ResetUTXOSet() // 重置UTXO
 
 }
@@ -105,21 +104,21 @@ func (cli *CLI) CreateBlockchainWithGenesis(addr string, nodeId string) {
 
 	// 设置UTXOSet操作
 
-	utxoSet := &UTXO.UTXOSet{BlockChain: blockChain}
+	utxoSet := &BLC.UTXOSet{BlockChain: blockChain}
 	// 更新
 	utxoSet.ResetUTXOSet()
 }
 
 // 创建钱包集合
 func (cli *CLI) CreateWallets(node_id string) {
-	wallets, _ := Wallet.NewWallets(node_id)
+	wallets, _ := BLC.NewWallets(node_id)
 	wallets.CreateWallet(node_id)
 	fmt.Printf("wallet: %v\n", wallets)
 }
 
 func (cli *CLI) GetAddrLists(node_id string) {
 	fmt.Println("print all wallets' address.")
-	wallets, _ := Wallet.NewWallets(node_id)
+	wallets, _ := BLC.NewWallets(node_id)
 	for addr, _ := range wallets.Wallets {
 		fmt.Printf("address : [%s]\n", addr)
 	}
@@ -143,7 +142,7 @@ func (cli *CLI) TestResetUTXO(nodeid string) {
 	bc := BLC.GetBCObject(nodeid)
 	defer bc.DB.Close()
 
-	utxoSet := &UTXO.UTXOSet{BlockChain: bc}
+	utxoSet := &BLC.UTXOSet{BlockChain: bc}
 	utxoSet.ResetUTXOSet() // 重置UTXO
 }
 
@@ -282,8 +281,8 @@ func (cli *CLI) Run() {
 		}
 		// 打印转账信息
 
-		fmt.Printf("From [%s] to [%s]   value [%s]\n", JsonToArray(*flagFromAddr), JsonToArray(*flagToAddr), JsonToArray(*flagAmount))
-		cli.Send(JsonToArray(*flagFromAddr), JsonToArray(*flagToAddr), JsonToArray(*flagAmount), node_id) // 发送交易
+		fmt.Printf("From [%s] to [%s]   value [%s]\n", Utils.JsonToArray(*flagFromAddr), Utils.JsonToArray(*flagToAddr), Utils.JsonToArray(*flagAmount))
+		cli.Send(Utils.JsonToArray(*flagFromAddr), Utils.JsonToArray(*flagToAddr), Utils.JsonToArray(*flagAmount), node_id) // 发送交易
 	}
 
 	//// 添加区块

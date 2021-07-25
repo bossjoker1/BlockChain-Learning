@@ -1,10 +1,7 @@
-package TX
+package BLC
 
 import (
-	"BlockChain-Learning/BC_Basic/BLC"
-	"BlockChain-Learning/BC_Basic/UTXO"
 	"BlockChain-Learning/BC_Basic/Utils"
-	"BlockChain-Learning/BC_Basic/Wallet"
 	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -59,7 +56,7 @@ func NewCoinBaseTX(addr string) *TX {
 }
 
 // 生成 转账交易
-func NewSimpleTX(from string, to string, amount int64, bc *BLC.BlockChain, txs []*TX, us *UTXO.UTXOSet, node_id string) *TX {
+func NewSimpleTX(from string, to string, amount int64, bc *BlockChain, txs []*TX, us *UTXOSet, node_id string) *TX {
 	var (
 		txInputs  []*TxInput
 		txOutputs []*TxOutput
@@ -70,7 +67,7 @@ func NewSimpleTX(from string, to string, amount int64, bc *BLC.BlockChain, txs [
 
 	fmt.Printf("from %s , money: %d\n", from, money)
 
-	wallets, _ := Wallet.NewWallets(node_id)
+	wallets, _ := NewWallets(node_id)
 	wallet := wallets.Wallets[from]
 	pubKey := wallet.PublicKey
 

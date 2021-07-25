@@ -842,12 +842,6 @@ Usage:
 给它调整了下目录，更加有层次些：
 
 ```
-D:.
-│  go.mod
-│  go.sum
-│  main.exe
-│  main.go
-│
 ├─BLC
 │      Base58.go
 │      Block.go
@@ -855,6 +849,17 @@ D:.
 │      BlockChainIterator.go
 │      Merkle_Tree.go
 │      PoW.go
+│      TX.go
+│      TxInput.go
+│      TxOutput.go
+│      TxOutputs.go
+│      UTXO.go
+│      UTXO_Set.go
+│      Wallet.go
+│      Wallets.go
+│
+├─CLI
+│      CLI.go
 │
 ├─Server
 │      Server.go
@@ -866,22 +871,7 @@ D:.
 │      Server_Version.go
 │      SeverHandles.go
 │
-├─TX
-│      TX.go
-│      TxInput.go
-│      TxOutput.go
-│
-├─Utils
-│      CLI.go
-│      Const.go
-│      Utils.go
-│
-├─UTXO
-│      TxOutputs.go
-│      UTXO.go
-│      UTXO_Set.go
-│
-└─Wallet
-        Wallet.go
-        Wallets.go
+└─Utils
+        Const.go
+        Utils.go
 ```

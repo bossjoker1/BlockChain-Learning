@@ -1,7 +1,6 @@
-package TX
+package BLC
 
 import (
-	"BlockChain-Learning/BC_Basic/BLC"
 	"BlockChain-Learning/BC_Basic/Utils"
 	"bytes"
 )
@@ -22,7 +21,7 @@ func (tout *TxOutput) UnLockPubKeyWithAddr(addr string) bool {
 
 // 锁定
 func Lock(addr string) []byte {
-	pubKey_hash := BLC.Base58Decode([]byte(addr))
+	pubKey_hash := Base58Decode([]byte(addr))
 	hash160 := pubKey_hash[1 : len(pubKey_hash)-Utils.CHECKSUMLEN]
 	//fmt.Printf("hash160 : %x\n", hash160)
 	return hash160

@@ -2,7 +2,6 @@ package Server
 
 import (
 	"BlockChain-Learning/BC_Basic/BLC"
-	"BlockChain-Learning/BC_Basic/UTXO"
 	"BlockChain-Learning/BC_Basic/Utils"
 	"bytes"
 	"encoding/gob"
@@ -118,7 +117,7 @@ func HandleBlock(req []byte, bc *BLC.BlockChain) {
 
 	// 更新utxo表
 
-	us := &UTXO.UTXOSet{bc}
+	us := &BLC.UTXOSet{bc}
 
 	us.Update()
 }

@@ -1,7 +1,6 @@
-package Wallet
+package BLC
 
 import (
-	"BlockChain-Learning/BC_Basic/BLC"
 	"BlockChain-Learning/BC_Basic/Utils"
 	"bytes"
 	"crypto/ecdsa"
@@ -67,7 +66,7 @@ func (w *Wallet) GetAddr() []byte {
 	bytes := append(verison_pubHash, checkSum...)
 
 	// Base58编码
-	return BLC.Base58Encode(bytes)
+	return Base58Encode(bytes)
 }
 
 // 生成校验和
@@ -83,7 +82,7 @@ func CheckSum(payload []byte) []byte {
 // 判断地址有效性
 func IsValidforAddr(addr []byte) bool {
 	// base58解码
-	decodeAddr := BLC.Base58Decode(addr)
+	decodeAddr := Base58Decode(addr)
 	// 拆分，checkSum发挥作用
 	checkSum := decodeAddr[len(decodeAddr)-Utils.CHECKSUMLEN:]
 	version_pubKeyHash := decodeAddr[:len(decodeAddr)-Utils.CHECKSUMLEN]

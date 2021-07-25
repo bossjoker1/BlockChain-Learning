@@ -1,4 +1,4 @@
-package Wallet
+package BLC
 
 import (
 	"BlockChain-Learning/BC_Basic/Utils"
